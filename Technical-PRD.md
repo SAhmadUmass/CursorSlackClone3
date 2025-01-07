@@ -204,8 +204,8 @@
   - [x] Login page with error handling
   - [x] Protected routes with middleware
   - [x] Responsive auth pages with proper UI/UX
-  - [ ] Sign out functionality
-  - [ ] Password reset
+  - [x] Sign out functionality
+  - [x] Password reset
   - [ ] User profile page
 
 ### 2. Channels ✓

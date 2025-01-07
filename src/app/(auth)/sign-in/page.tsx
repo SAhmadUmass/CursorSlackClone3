@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { AuthForm } from '@/components/auth/auth-form'
 import { createClient } from '@/lib/supabase/client'
@@ -8,6 +9,8 @@ import { createClient } from '@/lib/supabase/client'
 export default function SignInPage() {
   const supabase = createClient()
   const [error, setError] = useState<string>('')
+  const searchParams = useSearchParams()
+  const message = searchParams.get('message')
 
   const handleSubmit = async (data: any) => {
     try {
@@ -39,20 +42,35 @@ export default function SignInPage() {
             Enter your email to sign in to your account
           </p>
         </div>
+        
+        {message && (
+          <div className="rounded-md bg-green-50 p-4 text-sm text-green-600">
+            {decodeURIComponent(message)}
+          </div>
+        )}
+        
         {error && (
           <div className="rounded-md bg-red-50 p-4 text-sm text-red-600">
             {error}
           </div>
         )}
+        
         <AuthForm type="signin" onSubmit={handleSubmit} />
-        <p className="text-center text-sm text-muted-foreground">
+        
+        <div className="flex flex-col space-y-2 text-center text-sm">
+          <Link
+            href="/forgot-password"
+            className="text-muted-foreground hover:text-brand underline underline-offset-4"
+          >
+            Forgot your password?
+          </Link>
           <Link 
             href="/sign-up"
-            className="hover:text-brand underline underline-offset-4"
+            className="text-muted-foreground hover:text-brand underline underline-offset-4"
           >
             Don&apos;t have an account? Sign up
           </Link>
-        </p>
+        </div>
       </div>
     </main>
   )
