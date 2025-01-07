@@ -221,7 +221,7 @@
   - [x] Send text messages
   - [x] Message history
   - [x] Basic message timestamps
-  - [ ] Message input with Enter to send
+  - [x] Message input with Enter to send
   - [ ] Real-time message updates
 
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useChatStore } from '@/lib/store/chat-store'
 import { Channel, Message } from '@/types'
 import { createClient } from '@/lib/supabase/client'
+import { useRealtimeMessages } from '@/hooks/useRealtimeMessages'
 
 export default function Home() {
   const router = useRouter()
@@ -14,6 +15,9 @@ export default function Home() {
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+
+  // Initialize real-time subscription
+  useRealtimeMessages(currentChannel?.id ?? null)
 
   // Fetch user on mount
   useEffect(() => {
