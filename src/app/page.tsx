@@ -146,8 +146,21 @@ export default function Home() {
     <div className="flex h-screen bg-gray-50">
       {/* Channels Sidebar */}
       <div className="w-64 bg-gray-800 text-white p-4">
-        <div className="mb-8">
+        <div className="mb-8 flex justify-between items-center">
           <h1 className="text-xl font-bold">ChatGenius</h1>
+          <button
+            onClick={async () => {
+              try {
+                await supabase.auth.signOut()
+                router.push('/sign-in')
+              } catch (error) {
+                console.error('Error signing out:', error)
+              }
+            }}
+            className="px-2 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded"
+          >
+            Sign Out
+          </button>
         </div>
         
         <nav>
