@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
         user_id,
         content,
         created_at,
+        client_generated_id,
         user:users!messages_user_id_fkey (
           id,
           email,
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { channelId, content, userId } = await request.json()
+    const { channelId, content, userId, clientGeneratedId } = await request.json()
 
     // Verify that the userId matches the authenticated user
     if (userId !== user.id) {
@@ -94,11 +95,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!channelId || !content) {
+    if (!channelId || !content || !clientGeneratedId) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
       )
+    }
+
+    // Check if message with this client ID already exists
+    const { data: existingMessage } = await supabase
+      .from('messages')
+      .select('id')
+      .eq('client_generated_id', clientGeneratedId)
+      .single()
+
+    if (existingMessage) {
+      return NextResponse.json({
+        success: true,
+        data: existingMessage,
+        duplicate: true
+      })
     }
 
     const { data: message, error } = await supabase
@@ -108,6 +124,7 @@ export async function POST(request: NextRequest) {
           channel_id: channelId,
           user_id: user.id,
           content,
+          client_generated_id: clientGeneratedId
         },
       ])
       .select(`
@@ -116,6 +133,7 @@ export async function POST(request: NextRequest) {
         user_id,
         content,
         created_at,
+        client_generated_id,
         user:users!messages_user_id_fkey (
           id,
           email,

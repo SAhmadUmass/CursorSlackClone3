@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useChatStore } from '@/lib/store/chat-store'
-import { Message, User } from '@/types'
+import { Message } from '@/types'
 
 interface MessageResponse {
   id: string
@@ -9,6 +9,7 @@ interface MessageResponse {
   user_id: string
   content: string
   created_at: string
+  client_generated_id: string
   user: {
     id: string
     email: string
@@ -20,7 +21,13 @@ interface MessageResponse {
 
 export const useRealtimeMessages = (channelId: string | null) => {
   const supabase = createClient()
-  const { addMessage, updateMessage, deleteMessage } = useChatStore()
+  const { addMessage, updateMessage, deleteMessage, messages } = useChatStore()
+  const processedMessages = useRef<Set<string>>(new Set())
+
+  // Reset processed messages when channel changes
+  useEffect(() => {
+    processedMessages.current = new Set()
+  }, [channelId])
 
   useEffect(() => {
     if (!channelId) return
@@ -37,6 +44,11 @@ export const useRealtimeMessages = (channelId: string | null) => {
           filter: `channel_id=eq.${channelId}`,
         },
         async (payload) => {
+          // Check if we've already processed this message
+          if (processedMessages.current.has(payload.new.client_generated_id)) {
+            return
+          }
+
           // Fetch the complete message with user data
           const { data, error } = await supabase
             .from('messages')
@@ -46,6 +58,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
               user_id,
               content,
               created_at,
+              client_generated_id,
               user:users!messages_user_id_fkey (
                 id,
                 email,
@@ -58,15 +71,25 @@ export const useRealtimeMessages = (channelId: string | null) => {
             .single<MessageResponse>()
 
           if (!error && data) {
-            const message: Message = {
-              id: data.id,
-              channel_id: data.channel_id,
-              user_id: data.user_id,
-              content: data.content,
-              created_at: data.created_at,
-              user: data.user
+            // Check if message already exists in the store
+            const existingMessage = messages.find(
+              (m) => m.client_generated_id === data.client_generated_id
+            )
+            
+            if (!existingMessage) {
+              const message: Message = {
+                id: data.id,
+                channel_id: data.channel_id,
+                user_id: data.user_id,
+                content: data.content,
+                created_at: data.created_at,
+                client_generated_id: data.client_generated_id,
+                user: data.user
+              }
+              addMessage(message)
+              // Mark message as processed
+              processedMessages.current.add(data.client_generated_id)
             }
-            addMessage(message)
           }
         }
       )
@@ -88,6 +111,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
               user_id,
               content,
               created_at,
+              client_generated_id,
               user:users!messages_user_id_fkey (
                 id,
                 email,
@@ -106,6 +130,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
               user_id: data.user_id,
               content: data.content,
               created_at: data.created_at,
+              client_generated_id: data.client_generated_id,
               user: data.user
             }
             updateMessage(message)
@@ -129,5 +154,5 @@ export const useRealtimeMessages = (channelId: string | null) => {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [channelId, addMessage, updateMessage, deleteMessage])
+  }, [channelId, addMessage, updateMessage, deleteMessage, messages])
 } 

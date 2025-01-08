@@ -20,6 +20,7 @@ export interface Message {
   user_id: string
   content: string
   created_at: string
+  client_generated_id: string
   user: User
 }
 

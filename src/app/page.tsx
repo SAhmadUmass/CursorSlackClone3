@@ -8,6 +8,7 @@ import { Channel, Message } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages'
 import { AppSidebar } from '@/components/chat/app-sidebar'
+import { v4 as uuidv4 } from 'uuid'
 
 export default function Home() {
   const router = useRouter()
@@ -84,6 +85,8 @@ export default function Home() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !currentChannel || !user) return
 
+    const clientGeneratedId = uuidv4()
+
     try {
       const response = await fetch('/api/messages', {
         method: 'POST',
@@ -94,13 +97,17 @@ export default function Home() {
           channelId: currentChannel.id,
           content: newMessage,
           userId: user.id,
+          clientGeneratedId
         }),
       })
 
       const result = await response.json()
 
       if (result.success) {
-        addMessage(result.data)
+        // Only add the message locally if it's not a duplicate
+        if (!result.duplicate) {
+          addMessage(result.data)
+        }
         setNewMessage('')
       } else {
         console.error('Failed to send message:', result.error)
