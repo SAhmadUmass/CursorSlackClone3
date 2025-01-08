@@ -4,13 +4,15 @@ import { MessageCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useChatStore } from '@/lib/store/chat-store'
-import { Channel, Message } from '@/types'
+import { Channel } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages'
 import { AppSidebar } from '@/components/chat/app-sidebar'
+import { MessageList } from '@/components/chat/message-list'
 import { v4 as uuidv4 } from 'uuid'
+import { cn } from '@/lib/utils'
 
-export default function Home() {
+export default function HomePage() {
   const router = useRouter()
   const supabase = createClient()
   const { channels, currentChannel, messages, setChannels, setCurrentChannel, setMessages, addMessage } = useChatStore()
@@ -86,6 +88,28 @@ export default function Home() {
     if (!newMessage.trim() || !currentChannel || !user) return
 
     const clientGeneratedId = uuidv4()
+    const messageContent = newMessage
+    setNewMessage('') // Clear input immediately
+
+    // Create temporary message
+    const tempMessage = {
+      id: clientGeneratedId,
+      channel_id: currentChannel.id,
+      user_id: user.id,
+      content: messageContent,
+      created_at: new Date().toISOString(),
+      client_generated_id: clientGeneratedId,
+      status: 'sending' as const,
+      user: {
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || 'Unknown User',
+        avatar_url: null
+      }
+    }
+
+    // Add temporary message
+    addMessage(tempMessage)
 
     try {
       const response = await fetch('/api/messages', {
@@ -95,7 +119,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           channelId: currentChannel.id,
-          content: newMessage,
+          content: messageContent,
           userId: user.id,
           clientGeneratedId
         }),
@@ -104,34 +128,28 @@ export default function Home() {
       const result = await response.json()
 
       if (result.success) {
-        // Only add the message locally if it's not a duplicate
-        if (!result.duplicate) {
-          addMessage(result.data)
-        }
-        setNewMessage('')
+        // Update the temporary message with server data and 'sent' status
+        addMessage({
+          ...result.data,
+          client_generated_id: clientGeneratedId,
+          status: 'sent' as const
+        })
       } else {
+        // Update the temporary message with 'error' status
+        addMessage({
+          ...tempMessage,
+          status: 'error' as const
+        })
         console.error('Failed to send message:', result.error)
       }
     } catch (error) {
+      // Update the temporary message with 'error' status
+      addMessage({
+        ...tempMessage,
+        status: 'error' as const
+      })
       console.error('Failed to send message:', error)
     }
-  }
-
-  // Helper function to format message timestamp
-  const formatMessageTime = (timestamp: string) => {
-    try {
-      return new Date(timestamp).toLocaleTimeString()
-    } catch (error) {
-      return ''
-    }
-  }
-
-  // Helper function to get user display name
-  const getUserDisplayName = (message: Message) => {
-    if (message.user?.full_name) {
-      return message.user.full_name
-    }
-    return 'Unknown User'
   }
 
   if (loading) {
@@ -161,38 +179,69 @@ export default function Home() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Channel Header */}
-        <header className="h-14 border-b flex items-center px-4 bg-background">
-          <div className="flex items-center space-x-2">
-            <MessageCircle className="h-5 w-5 text-muted-foreground" />
-            <h2 className="font-semibold text-foreground">
-              {currentChannel ? `# ${currentChannel.name}` : 'Select a channel'}
-            </h2>
+        <header className={cn(
+          'h-14 border-b border-border',
+          'bg-card/50 backdrop-blur-sm',
+          'flex items-center',
+          'px-4',
+          'transition-colors duration-200',
+          'animate-in fade-in-50 duration-500'
+        )}>
+          <div className={cn(
+            'flex items-center gap-3',
+            'py-2.5'
+          )}>
+            <div className={cn(
+              'flex items-center justify-center',
+              'h-6 w-6',
+              'rounded-md',
+              'bg-primary/10 dark:bg-primary/20',
+              'transition-colors duration-200'
+            )}>
+              <MessageCircle className="h-4 w-4 text-primary" />
+            </div>
+            
+            <div className="flex flex-col">
+              <h2 className={cn(
+                'text-base font-semibold',
+                'text-foreground',
+                'flex items-center gap-2'
+              )}>
+                {currentChannel ? (
+                  <>
+                    <span className="text-primary">#</span>
+                    <span>{currentChannel.name}</span>
+                  </>
+                ) : (
+                  'Select a channel'
+                )}
+              </h2>
+              {currentChannel && (
+                <p className={cn(
+                  'text-xs text-muted-foreground',
+                  'mt-0.5'
+                )}>
+                  {messages.length} messages
+                </p>
+              )}
+            </div>
           </div>
         </header>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((message) => (
-            <div key={message.id} className="flex items-start space-x-3">
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-                {getUserDisplayName(message).charAt(0)}
-              </div>
-              <div>
-                <div className="flex items-baseline space-x-2">
-                  <span className="font-semibold text-foreground">{getUserDisplayName(message)}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatMessageTime(message.created_at)}
-                  </span>
-                </div>
-                <p className="text-foreground">{message.content}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <MessageList messages={messages} />
 
         {/* Message Input */}
-        <div className="p-4 border-t bg-background">
-          <div className="flex items-center space-x-2">
+        <div className={cn(
+          'p-4 border-t border-border',
+          'bg-card/50 backdrop-blur-sm',
+          'transition-colors duration-200',
+          'animate-in fade-in-50 duration-500'
+        )}>
+          <div className={cn(
+            'flex items-center gap-3',
+            'relative'
+          )}>
             <input
               type="text"
               value={newMessage}
@@ -204,17 +253,63 @@ export default function Home() {
                 }
               }}
               placeholder={currentChannel ? `Message #${currentChannel.name}` : 'Select a channel'}
-              className="flex-1 rounded-lg border border-input bg-background px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className={cn(
+                'flex-1',
+                'rounded-xl',
+                'border border-border',
+                'bg-background/80',
+                'px-4 py-2.5',
+                'text-foreground',
+                'placeholder:text-muted-foreground',
+                'focus:outline-none focus:ring-2 focus:ring-primary/20',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'transition-all duration-200'
+              )}
               disabled={!currentChannel}
             />
             <button
               onClick={handleSendMessage}
-              disabled={!currentChannel}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!currentChannel || !newMessage.trim()}
+              className={cn(
+                'px-4 py-2.5',
+                'bg-primary text-primary-foreground',
+                'rounded-xl',
+                'font-medium',
+                'hover:bg-primary/90',
+                'focus:outline-none focus:ring-2 focus:ring-primary/20',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'transition-all duration-200',
+                'flex items-center gap-2'
+              )}
             >
-              Send
+              <span>Send</span>
+              <svg 
+                className={cn(
+                  'w-4 h-4',
+                  'transition-transform duration-200',
+                  'group-hover:translate-x-0.5'
+                )}
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M13 7l5 5m0 0l-5 5m5-5H6"
+                />
+              </svg>
             </button>
           </div>
+          {currentChannel && (
+            <div className={cn(
+              'text-xs text-muted-foreground/60',
+              'mt-2 ml-1'
+            )}>
+              Press Enter to send, Shift + Enter for new line
+            </div>
+          )}
         </div>
       </div>
     </div>

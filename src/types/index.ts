@@ -21,7 +21,13 @@ export interface Message {
   content: string
   created_at: string
   client_generated_id: string
-  user: User
+  status?: 'sending' | 'sent' | 'error'
+  user?: {
+    id: string
+    email: string
+    full_name: string
+    avatar_url: string | null
+  }
 }
 
 export interface ChannelWithMessageCount extends Channel {

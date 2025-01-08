@@ -222,7 +222,7 @@
   - [x] Message history
   - [x] Basic message timestamps
   - [x] Message input with Enter to send
-  - [ ] Real-time message updates
+  - [x] Real-time message updates
 
 
 ### 4. User Interface ✓
@@ -234,7 +234,7 @@
   - [x] Loading states
   - [x] Error handling
   - [x] User avatars (initials fallback)
-  - [ ] Dark mode support
+  - [x] Dark mode support
 
 ### 5. File Uploads
 - [ ] **File Uploads**

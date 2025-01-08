@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { AuthForm } from '@/components/auth/auth-form'
 import { createClient } from '@/lib/supabase/client'
+import { cn } from '@/lib/utils'
 
 export default function SignInPage() {
   const supabase = createClient()
@@ -32,41 +33,85 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="w-full max-w-[350px] space-y-6">
+    <main className={cn(
+      'min-h-screen w-full',
+      'flex flex-col items-center justify-center',
+      'bg-gray-50 dark:bg-gray-900',
+      'p-4 sm:p-8'
+    )}>
+      <div className={cn(
+        'w-full max-w-[400px]',
+        'space-y-6',
+        'animate-in fade-in-50 slide-in-from-bottom-16 duration-500'
+      )}>
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className={cn(
+            'text-3xl font-bold tracking-tight',
+            'text-gray-900 dark:text-gray-100',
+            'animate-in fade-in-50 duration-500 delay-150'
+          )}>
             Welcome back
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className={cn(
+            'text-sm text-gray-500 dark:text-gray-400',
+            'animate-in fade-in-50 duration-500 delay-200'
+          )}>
             Enter your email to sign in to your account
           </p>
         </div>
         
         {message && (
-          <div className="rounded-md bg-green-50 p-4 text-sm text-green-600">
+          <div className={cn(
+            'rounded-lg p-4',
+            'bg-green-50 dark:bg-green-900/20',
+            'text-sm text-green-600 dark:text-green-400',
+            'border border-green-200 dark:border-green-800',
+            'animate-in fade-in-50 duration-300'
+          )}>
             {decodeURIComponent(message)}
           </div>
         )}
         
         {error && (
-          <div className="rounded-md bg-red-50 p-4 text-sm text-red-600">
+          <div className={cn(
+            'rounded-lg p-4',
+            'bg-red-50 dark:bg-red-900/20',
+            'text-sm text-red-600 dark:text-red-400',
+            'border border-red-200 dark:border-red-800',
+            'animate-in fade-in-50 duration-300'
+          )}>
             {error}
           </div>
         )}
         
-        <AuthForm type="signin" onSubmit={handleSubmit} />
+        <div className="animate-in fade-in-50 duration-500 delay-300">
+          <AuthForm type="signin" onSubmit={handleSubmit} />
+        </div>
         
-        <div className="flex flex-col space-y-2 text-center text-sm">
+        <div className={cn(
+          'flex flex-col space-y-3',
+          'text-center text-sm',
+          'animate-in fade-in-50 duration-500 delay-500'
+        )}>
           <Link
             href="/forgot-password"
-            className="text-muted-foreground hover:text-brand underline underline-offset-4"
+            className={cn(
+              'text-gray-500 dark:text-gray-400',
+              'hover:text-gray-900 dark:hover:text-gray-100',
+              'transition-colors duration-200',
+              'underline underline-offset-4'
+            )}
           >
             Forgot your password?
           </Link>
           <Link 
             href="/sign-up"
-            className="text-muted-foreground hover:text-brand underline underline-offset-4"
+            className={cn(
+              'text-gray-500 dark:text-gray-400',
+              'hover:text-gray-900 dark:hover:text-gray-100',
+              'transition-colors duration-200',
+              'underline underline-offset-4'
+            )}
           >
             Don&apos;t have an account? Sign up
           </Link>

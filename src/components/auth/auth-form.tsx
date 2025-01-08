@@ -62,24 +62,40 @@ export function AuthForm({
   }
 
   return (
-    <div className={cn('grid gap-6', className)} {...props}>
+    <div className={cn(
+      'w-full max-w-md mx-auto p-6 space-y-6',
+      'bg-white dark:bg-gray-900 rounded-xl shadow-lg',
+      'transform transition-all duration-300 ease-in-out',
+      'hover:shadow-xl',
+      'border border-gray-200 dark:border-gray-800',
+      className
+    )} {...props}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           {type === 'signup' && (
             <FormField
               control={form.control}
               name="fullName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Full Name
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="John Doe"
                       disabled={isLoading}
+                      className={cn(
+                        'w-full px-4 py-2 rounded-lg border',
+                        'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                        'transition-all duration-200 ease-in-out',
+                        'placeholder:text-gray-400',
+                        'disabled:opacity-50 disabled:cursor-not-allowed'
+                      )}
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-sm text-red-500 mt-1" />
                 </FormItem>
               )}
             />
@@ -89,16 +105,25 @@ export function AuthForm({
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Email
+                </FormLabel>
                 <FormControl>
                   <Input
                     placeholder="name@example.com"
                     type="email"
                     disabled={isLoading}
+                    className={cn(
+                      'w-full px-4 py-2 rounded-lg border',
+                      'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                      'transition-all duration-200 ease-in-out',
+                      'placeholder:text-gray-400',
+                      'disabled:opacity-50 disabled:cursor-not-allowed'
+                    )}
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-sm text-red-500 mt-1" />
               </FormItem>
             )}
           />
@@ -107,24 +132,47 @@ export function AuthForm({
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Password
+                </FormLabel>
                 <FormControl>
                   <Input
                     placeholder="Enter your password"
                     type="password"
                     disabled={isLoading}
+                    className={cn(
+                      'w-full px-4 py-2 rounded-lg border',
+                      'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                      'transition-all duration-200 ease-in-out',
+                      'placeholder:text-gray-400',
+                      'disabled:opacity-50 disabled:cursor-not-allowed'
+                    )}
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-sm text-red-500 mt-1" />
               </FormItem>
             )}
           />
-          <Button className="w-full" type="submit" disabled={isLoading}>
+          <Button 
+            className={cn(
+              'w-full py-2.5',
+              'bg-blue-600 hover:bg-blue-700',
+              'text-white font-medium rounded-lg',
+              'transform transition-all duration-200 ease-in-out',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'flex items-center justify-center space-x-2'
+            )} 
+            type="submit" 
+            disabled={isLoading}
+          >
             {isLoading && (
-              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+              <Icons.spinner className="h-4 w-4 animate-spin" />
             )}
-            {type === 'signin' ? 'Sign In' : 'Sign Up'}
+            <span>
+              {type === 'signin' ? 'Sign In' : 'Sign Up'}
+            </span>
           </Button>
         </form>
       </Form>

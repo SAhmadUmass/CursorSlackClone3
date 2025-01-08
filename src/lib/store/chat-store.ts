@@ -21,13 +21,26 @@ export const useChatStore = create<ChatStore>((set) => ({
   setCurrentChannel: (channel) => set({ currentChannel: channel }),
   setMessages: (messages) => set({ messages }),
   addMessage: (message) =>
-    set((state) => ({
-      messages: [...state.messages, message],
-    })),
+    set((state) => {
+      // Check if message with same client_generated_id already exists
+      const existingIndex = state.messages.findIndex(
+        (m) => m.client_generated_id === message.client_generated_id
+      )
+
+      if (existingIndex !== -1) {
+        // Update existing message
+        const updatedMessages = [...state.messages]
+        updatedMessages[existingIndex] = message
+        return { messages: updatedMessages }
+      }
+
+      // Add new message
+      return { messages: [...state.messages, message] }
+    }),
   updateMessage: (message) =>
     set((state) => ({
       messages: state.messages.map((msg) =>
-        msg.id === message.id ? message : msg
+        msg.client_generated_id === message.client_generated_id ? message : msg
       ),
     })),
   deleteMessage: (messageId) =>
