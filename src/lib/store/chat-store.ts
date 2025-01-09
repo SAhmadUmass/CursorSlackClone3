@@ -11,6 +11,9 @@ interface ChatStore {
   addMessage: (message: Message) => void
   updateMessage: (message: Message) => void
   deleteMessage: (messageId: string) => void
+  addChannel: (channel: Channel) => void
+  updateChannel: (channel: Channel) => void
+  deleteChannel: (channelId: string) => void
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
@@ -46,5 +49,20 @@ export const useChatStore = create<ChatStore>((set) => ({
   deleteMessage: (messageId) =>
     set((state) => ({
       messages: state.messages.filter((msg) => msg.id !== messageId),
+    })),
+  addChannel: (channel) =>
+    set((state) => ({
+      channels: [...state.channels, channel],
+    })),
+  updateChannel: (channel) =>
+    set((state) => ({
+      channels: state.channels.map((ch) => (ch.id === channel.id ? channel : ch)),
+      currentChannel: state.currentChannel?.id === channel.id ? channel : state.currentChannel,
+    })),
+  deleteChannel: (channelId) =>
+    set((state) => ({
+      channels: state.channels.filter((ch) => ch.id !== channelId),
+      currentChannel: state.currentChannel?.id === channelId ? null : state.currentChannel,
+      messages: state.messages.filter((msg) => msg.channel_id !== channelId),
     })),
 })) 

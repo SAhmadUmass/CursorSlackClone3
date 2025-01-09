@@ -7,6 +7,7 @@ import { useChatStore } from '@/lib/store/chat-store'
 import { Channel } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages'
+import { useRealtimeChannels } from '@/hooks/useRealtimeChannels'
 import { AppSidebar } from '@/components/chat/app-sidebar'
 import { MessageList } from '@/components/chat/message-list'
 import { v4 as uuidv4 } from 'uuid'
@@ -22,6 +23,7 @@ export default function HomePage() {
 
   // Initialize real-time subscription
   useRealtimeMessages(currentChannel?.id ?? null)
+  useRealtimeChannels()
 
   // Fetch user on mount
   useEffect(() => {

@@ -1,23 +1,14 @@
 'use client'
 
-import { Channel } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
-import { LogOut, Hash, Plus } from 'lucide-react'
+import { LogOut } from 'lucide-react'
+import { ChannelList } from './channel-list'
+import { ChannelCreateModal } from './channel-create-modal'
 
-interface AppSidebarProps {
-  channels: Channel[]
-  currentChannel: Channel | null
-  onChannelSelect: (channel: Channel) => void
-}
-
-export function AppSidebar({
-  channels,
-  currentChannel,
-  onChannelSelect,
-}: AppSidebarProps) {
+export function AppSidebar() {
   const router = useRouter()
   const supabase = createClient()
 
@@ -75,41 +66,12 @@ export function AppSidebar({
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Channels
             </h2>
-            <button
-              className={cn(
-                'p-1 rounded-md',
-                'text-muted-foreground hover:text-foreground',
-                'hover:bg-accent',
-                'transition-colors duration-200',
-                'focus:outline-none focus:ring-2 focus:ring-ring'
-              )}
-              title="Add Channel"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
           </div>
 
-          <nav className="space-y-1">
-            {channels.map((channel) => (
-              <button
-                key={channel.id}
-                onClick={() => onChannelSelect(channel)}
-                className={cn(
-                  'w-full px-2 py-1.5 rounded-md',
-                  'flex items-center gap-2',
-                  'text-sm font-medium',
-                  'transition-colors duration-200',
-                  'focus:outline-none focus:ring-2 focus:ring-ring',
-                  currentChannel?.id === channel.id
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                )}
-              >
-                <Hash className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{channel.name}</span>
-              </button>
-            ))}
-          </nav>
+          <div className="space-y-4">
+            <ChannelCreateModal />
+            <ChannelList />
+          </div>
         </div>
       </div>
 
