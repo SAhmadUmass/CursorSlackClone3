@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase/config'
 
+// Add interface for the expected channel type
+interface Channel {
+  name: string
+  messages: { count: number }[]
+}
+
 export async function GET() {
   try {
     const { data, error } = await supabase
@@ -10,11 +16,20 @@ export async function GET() {
         name,
         messages:messages(count)
       `
-      )
-      .returns<{ name: string; messages: { count: number }[] }>()
+      ) as { data: Channel[]; error: any }
 
     if (error) {
-      throw error
+      return NextResponse.json({
+        success: false,
+        error: error.message
+      }, { status: 500 })
+    }
+
+    if (!data) {
+      return NextResponse.json({
+        success: false,
+        error: 'No data found'
+      }, { status: 404 })
     }
 
     return NextResponse.json({
@@ -26,6 +41,9 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Error:', error)
-    return NextResponse.json({ success: false, error: 'Failed to fetch channels' }, { status: 500 })
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to fetch channels' 
+    }, { status: 500 })
   }
 }
