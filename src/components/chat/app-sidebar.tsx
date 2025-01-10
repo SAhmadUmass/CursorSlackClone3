@@ -1,16 +1,33 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
 import { LogOut } from 'lucide-react'
 import { ChannelList } from './channel-list'
 import { ChannelCreateModal } from './channel-create-modal'
+import { DMList } from './dm-list'
+import { DMCreate } from './dm-create'
 
 export function AppSidebar() {
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
+  const [currentUser, setCurrentUser] = useState<any>(null)
+
+  // Extract channel ID from pathname
+  const activeDMId = pathname?.startsWith('/dm/') ? pathname.split('/')[2] : undefined
+
+  // Fetch current user
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setCurrentUser(user)
+    }
+    fetchUser()
+  }, [supabase])
 
   return (
     <div className={cn(
@@ -56,8 +73,26 @@ export function AppSidebar() {
         </div>
       </div>
 
-      {/* Channels Section */}
+      {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
+        {/* Direct Messages Section */}
+        <div className={cn(
+          'p-4',
+          'animate-in fade-in-50 duration-500 delay-100'
+        )}>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Direct Messages
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            <DMCreate />
+            <DMList activeDMId={activeDMId} />
+          </div>
+        </div>
+
+        {/* Channels Section */}
         <div className={cn(
           'p-4',
           'animate-in fade-in-50 duration-500 delay-200'
@@ -88,11 +123,11 @@ export function AppSidebar() {
             'flex items-center justify-center',
             'text-sm font-medium text-primary'
           )}>
-            U
+            {currentUser?.user_metadata?.full_name?.charAt(0) || 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">
-              User Name
+              {currentUser?.user_metadata?.full_name || 'Loading...'}
             </p>
             <p className="text-xs text-muted-foreground truncate">
               Online

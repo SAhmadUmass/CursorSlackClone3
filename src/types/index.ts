@@ -16,13 +16,14 @@ export interface Channel {
 
 export interface Message {
   id: string
-  channel_id: string
-  user_id: string
   content: string
+  user_id: string
+  channel_id?: string
+  dm_channel_id?: string
   created_at: string
-  client_generated_id: string
+  client_generated_id?: string
   status?: 'sending' | 'sent' | 'error'
-  user?: {
+  user: {
     id: string
     email: string
     full_name: string
@@ -32,4 +33,25 @@ export interface Message {
 
 export interface ChannelWithMessageCount extends Channel {
   messageCount: number
+}
+
+export interface DMChannel {
+  id: string
+  created_at: string
+  user1_id: string
+  user2_id: string
+  other_user?: User // The other user in the conversation
+}
+
+export interface DMMessage extends Omit<Message, 'channel_id'> {
+  dm_channel_id: string
+}
+
+export interface CreateDMChannelRequest {
+  other_user_id: string
+}
+
+export interface SendDMMessageRequest {
+  content: string
+  client_generated_id: string
 } 
