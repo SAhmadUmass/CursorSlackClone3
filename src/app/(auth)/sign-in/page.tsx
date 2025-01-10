@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
 export default function SignInPage() {
   const [supabase] = useState(() => createClient())
