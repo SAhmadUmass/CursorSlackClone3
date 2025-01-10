@@ -54,10 +54,7 @@ export default function TestPage() {
       <h1 className="mb-8 text-2xl font-bold">Supabase Connection Test</h1>
       <div className="w-full max-w-md space-y-4">
         {channels.map((channel) => (
-          <div
-            key={channel.name}
-            className="rounded-lg border border-gray-200 p-4 shadow-sm"
-          >
+          <div key={channel.name} className="rounded-lg border border-gray-200 p-4 shadow-sm">
             <h2 className="text-xl font-semibold">{channel.name}</h2>
             <p className="text-gray-600">Messages: {channel.messageCount}</p>
           </div>
@@ -65,4 +62,4 @@ export default function TestPage() {
       </div>
     </div>
   )
-} 
+}

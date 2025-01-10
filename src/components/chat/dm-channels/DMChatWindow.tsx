@@ -14,11 +14,7 @@ interface DMChatWindowProps {
   className?: string
 }
 
-export function DMChatWindow({
-  channelId,
-  initialMessages = [],
-  className,
-}: DMChatWindowProps) {
+export function DMChatWindow({ channelId, initialMessages = [], className }: DMChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [isLoading, setIsLoading] = useState(true)
   const [otherUserName, setOtherUserName] = useState('')
@@ -30,7 +26,9 @@ export function DMChatWindow({
   // Fetch current user
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       setCurrentUser(user)
     }
     fetchUser()
@@ -40,17 +38,21 @@ export function DMChatWindow({
   useEffect(() => {
     const fetchDMChannel = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
         if (!user) return
 
         // Get DM channel and other user's info
         const { data: channel } = await supabase
           .from('dm_channels')
-          .select(`
+          .select(
+            `
             *,
             user1:user1_id(*),
             user2:user2_id(*)
-          `)
+          `
+          )
           .eq('id', channelId)
           .single()
 
@@ -68,21 +70,24 @@ export function DMChatWindow({
         // First try to fetch messages with dm_channel_id
         const { data: messages, error } = await supabase
           .from('messages')
-          .select(`
+          .select(
+            `
             *,
             user:user_id(*)
-          `)
+          `
+          )
           .eq('dm_channel_id', channelId)
           .order('created_at', { ascending: false })
 
         if (error) throw error
-        
+
         // Transform messages to include channel_id if needed
-        const transformedMessages = messages?.map(msg => ({
-          ...msg,
-          channel_id: msg.dm_channel_id || msg.channel_id // Ensure channel_id is set for MessageList compatibility
-        })) || []
-        
+        const transformedMessages =
+          messages?.map((msg) => ({
+            ...msg,
+            channel_id: msg.dm_channel_id || msg.channel_id, // Ensure channel_id is set for MessageList compatibility
+          })) || []
+
         setMessages(transformedMessages)
       } catch (error) {
         console.error('Error fetching messages:', error)
@@ -103,7 +108,7 @@ export function DMChatWindow({
       // Transform the message to include channel_id if needed
       const transformedMessage = {
         ...message,
-        channel_id: message.dm_channel_id || message.channel_id
+        channel_id: message.dm_channel_id || message.channel_id,
       }
       setMessages((prev) => [transformedMessage, ...prev])
     },
@@ -111,13 +116,9 @@ export function DMChatWindow({
       // Transform the message to include channel_id if needed
       const transformedMessage = {
         ...message,
-        channel_id: message.dm_channel_id || message.channel_id
+        channel_id: message.dm_channel_id || message.channel_id,
       }
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === message.id ? transformedMessage : msg
-        )
-      )
+      setMessages((prev) => prev.map((msg) => (msg.id === message.id ? transformedMessage : msg)))
     },
     onPresenceChange: (userId, isOnline) => {
       // Only update if it's the other user's presence
@@ -148,8 +149,8 @@ export function DMChatWindow({
         id: currentUser.id,
         email: currentUser.email || '',
         full_name: currentUser.user_metadata?.full_name || 'Unknown User',
-        avatar_url: null
-      }
+        avatar_url: null,
+      },
     }
 
     // Add temporary message to the list
@@ -164,10 +165,12 @@ export function DMChatWindow({
           dm_channel_id: channelId,
           client_generated_id: clientGeneratedId,
         })
-        .select(`
+        .select(
+          `
           *,
           user:user_id(*)
-        `)
+        `
+        )
         .single()
 
       if (error) throw error
@@ -176,15 +179,13 @@ export function DMChatWindow({
       const transformedMessage: Message = {
         ...data,
         channel_id: data.dm_channel_id, // Set for MessageList compatibility
-        status: 'sent' as const
+        status: 'sent' as const,
       }
 
       // Update the temporary message with server data
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.client_generated_id === clientGeneratedId
-            ? transformedMessage
-            : msg
+          msg.client_generated_id === clientGeneratedId ? transformedMessage : msg
         )
       )
     } catch (error) {
@@ -192,9 +193,7 @@ export function DMChatWindow({
       // Update the temporary message with error status
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.client_generated_id === clientGeneratedId
-            ? { ...msg, status: 'error' as const }
-            : msg
+          msg.client_generated_id === clientGeneratedId ? { ...msg, status: 'error' as const } : msg
         )
       )
     }
@@ -206,10 +205,9 @@ export function DMChatWindow({
       <div className="border-b px-4 py-2 flex items-center justify-between">
         <div>
           <h2 className="font-semibold">{otherUserName}</h2>
-          <p className={cn(
-            'text-xs',
-            otherUserOnline ? 'text-green-500' : 'text-muted-foreground'
-          )}>
+          <p
+            className={cn('text-xs', otherUserOnline ? 'text-green-500' : 'text-muted-foreground')}
+          >
             {otherUserOnline ? 'Online' : 'Offline'}
           </p>
         </div>
@@ -219,16 +217,15 @@ export function DMChatWindow({
       <MessageList messages={messages} isLoading={isLoading} />
 
       {/* Message Input */}
-      <div className={cn(
-        'p-4 border-t border-border',
-        'bg-card/50 backdrop-blur-sm',
-        'transition-colors duration-200',
-        'animate-in fade-in-50 duration-500'
-      )}>
-        <div className={cn(
-          'flex items-center gap-3',
-          'relative'
-        )}>
+      <div
+        className={cn(
+          'p-4 border-t border-border',
+          'bg-card/50 backdrop-blur-sm',
+          'transition-colors duration-200',
+          'animate-in fade-in-50 duration-500'
+        )}
+      >
+        <div className={cn('flex items-center gap-3', 'relative')}>
           <input
             type="text"
             value={newMessage}
@@ -268,32 +265,29 @@ export function DMChatWindow({
             )}
           >
             <span>Send</span>
-            <svg 
+            <svg
               className={cn(
                 'w-4 h-4',
                 'transition-transform duration-200',
                 'group-hover:translate-x-0.5'
               )}
-              fill="none" 
-              viewBox="0 0 24 24" 
+              fill="none"
+              viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
                 d="M13 7l5 5m0 0l-5 5m5-5H6"
               />
             </svg>
           </button>
         </div>
-        <div className={cn(
-          'text-xs text-muted-foreground/60',
-          'mt-2 ml-1'
-        )}>
+        <div className={cn('text-xs text-muted-foreground/60', 'mt-2 ml-1')}>
           Press Enter to send, Shift + Enter for new line
         </div>
       </div>
     </div>
   )
-} 
+}

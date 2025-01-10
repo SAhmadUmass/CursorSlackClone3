@@ -19,11 +19,7 @@ export const ChannelInfoDialog = ({ channel, className }: ChannelInfoDialogProps
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn('h-6 w-6 hover:bg-accent', className)}
-        >
+        <Button variant="ghost" size="icon" className={cn('h-6 w-6 hover:bg-accent', className)}>
           <InfoIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -37,9 +33,7 @@ export const ChannelInfoDialog = ({ channel, className }: ChannelInfoDialogProps
         <div className="space-y-4">
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-1">Description</h4>
-            <p className="text-sm">
-              {channel.description || 'No description provided'}
-            </p>
+            <p className="text-sm">{channel.description || 'No description provided'}</p>
           </div>
           <div>
             <h4 className="text-sm font-medium text-muted-foreground mb-1">Created</h4>
@@ -55,4 +49,4 @@ export const ChannelInfoDialog = ({ channel, className }: ChannelInfoDialogProps
       </DialogContent>
     </Dialog>
   )
-} 
+}

@@ -19,16 +19,18 @@ import { Input } from '@/components/ui/input'
 import { Icons } from '@/components/ui/icons'
 import { resetPassword } from '@/lib/auth'
 
-const resetPasswordSchema = z.object({
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(100, 'Password must be less than 100 characters'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-})
+const resetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(100, 'Password must be less than 100 characters'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
 
 type ResetPasswordValues = z.infer<typeof resetPasswordSchema>
 
@@ -61,41 +63,51 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className={cn(
-      'min-h-screen w-full',
-      'flex flex-col items-center justify-center',
-      'bg-gray-50 dark:bg-gray-900',
-      'p-4 sm:p-8'
-    )}>
-      <div className={cn(
-        'w-full max-w-[400px]',
-        'space-y-6',
-        'animate-in fade-in-50 slide-in-from-bottom-16 duration-500'
-      )}>
+    <main
+      className={cn(
+        'min-h-screen w-full',
+        'flex flex-col items-center justify-center',
+        'bg-gray-50 dark:bg-gray-900',
+        'p-4 sm:p-8'
+      )}
+    >
+      <div
+        className={cn(
+          'w-full max-w-[400px]',
+          'space-y-6',
+          'animate-in fade-in-50 slide-in-from-bottom-16 duration-500'
+        )}
+      >
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className={cn(
-            'text-3xl font-bold tracking-tight',
-            'text-gray-900 dark:text-gray-100',
-            'animate-in fade-in-50 duration-500 delay-150'
-          )}>
+          <h1
+            className={cn(
+              'text-3xl font-bold tracking-tight',
+              'text-gray-900 dark:text-gray-100',
+              'animate-in fade-in-50 duration-500 delay-150'
+            )}
+          >
             Set new password
           </h1>
-          <p className={cn(
-            'text-sm text-gray-500 dark:text-gray-400',
-            'animate-in fade-in-50 duration-500 delay-200'
-          )}>
+          <p
+            className={cn(
+              'text-sm text-gray-500 dark:text-gray-400',
+              'animate-in fade-in-50 duration-500 delay-200'
+            )}
+          >
             Enter your new password below
           </p>
         </div>
 
         {error && (
-          <div className={cn(
-            'rounded-lg p-4',
-            'bg-red-50 dark:bg-red-900/20',
-            'text-sm text-red-600 dark:text-red-400',
-            'border border-red-200 dark:border-red-800',
-            'animate-in fade-in-50 duration-300'
-          )}>
+          <div
+            className={cn(
+              'rounded-lg p-4',
+              'bg-red-50 dark:bg-red-900/20',
+              'text-sm text-red-600 dark:text-red-400',
+              'border border-red-200 dark:border-red-800',
+              'animate-in fade-in-50 duration-300'
+            )}
+          >
             {error}
           </div>
         )}
@@ -157,7 +169,7 @@ export default function ResetPasswordPage() {
                   </FormItem>
                 )}
               />
-              <Button 
+              <Button
                 className={cn(
                   'w-full py-2.5',
                   'bg-blue-600 hover:bg-blue-700',
@@ -166,13 +178,11 @@ export default function ResetPasswordPage() {
                   'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
                   'flex items-center justify-center space-x-2'
-                )} 
-                type="submit" 
+                )}
+                type="submit"
                 disabled={isLoading}
               >
-                {isLoading && (
-                  <Icons.spinner className="h-4 w-4 animate-spin" />
-                )}
+                {isLoading && <Icons.spinner className="h-4 w-4 animate-spin" />}
                 <span>Reset password</span>
               </Button>
             </form>
@@ -181,4 +191,4 @@ export default function ResetPasswordPage() {
       </div>
     </main>
   )
-} 
+}

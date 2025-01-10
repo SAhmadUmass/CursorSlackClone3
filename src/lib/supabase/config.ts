@@ -20,4 +20,4 @@ export const testConnection = async () => {
     console.error('Error connecting to Supabase:', error)
     return false
   }
-} 
+}

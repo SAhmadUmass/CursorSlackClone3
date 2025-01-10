@@ -32,7 +32,7 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
   // Check scroll position to show/hide button
   const handleScroll = () => {
     if (!containerRef.current) return
-    
+
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
     setShowScrollButton(!isNearBottom)
@@ -56,9 +56,13 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
       const timestamp = formatMessageTime(messageDate)
 
       // Check if we should start a new group
-      const shouldStartNewGroup = !currentGroup || 
+      const shouldStartNewGroup =
+        !currentGroup ||
         currentGroup.userId !== message.user_id ||
-        getMinutesDifference(new Date(currentGroup.messages[currentGroup.messages.length - 1].created_at), messageDate) > 5
+        getMinutesDifference(
+          new Date(currentGroup.messages[currentGroup.messages.length - 1].created_at),
+          messageDate
+        ) > 5
 
       if (shouldStartNewGroup) {
         currentGroup = {
@@ -66,7 +70,7 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
           userName,
           userInitial,
           messages: [message],
-          timestamp
+          timestamp,
         }
         groups.push(currentGroup)
       } else if (currentGroup) {
@@ -81,18 +85,9 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
     return (
       <div className="flex-1 p-4 space-y-4">
         {[1, 2, 3].map((i) => (
-          <div 
-            key={i} 
-            className={cn(
-              'flex items-start gap-3',
-              'animate-pulse'
-            )}
-          >
+          <div key={i} className={cn('flex items-start gap-3', 'animate-pulse')}>
             {/* Avatar Skeleton */}
-            <div className={cn(
-              'h-8 w-8 rounded-full',
-              'bg-muted'
-            )} />
+            <div className={cn('h-8 w-8 rounded-full', 'bg-muted')} />
 
             <div className="flex-1 space-y-2">
               {/* Header Skeleton */}
@@ -113,7 +108,7 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       onScroll={handleScroll}
       className={cn(
@@ -125,7 +120,7 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
       )}
     >
       {messageGroups.map((group, index) => (
-        <div 
+        <div
           key={group.messages[0].id}
           className={cn(
             'group relative',
@@ -133,16 +128,18 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
             index === 0 ? 'slide-in-from-bottom-4' : ''
           )}
         >
-          <div className={cn(
-            'flex items-start gap-3',
-            'px-3 py-2',
-            'rounded-lg',
-            'transition-colors duration-200',
-            'hover:bg-accent/5 dark:hover:bg-accent/10',
-            'group-hover:shadow-sm dark:group-hover:shadow-accent/5'
-          )}>
+          <div
+            className={cn(
+              'flex items-start gap-3',
+              'px-3 py-2',
+              'rounded-lg',
+              'transition-colors duration-200',
+              'hover:bg-accent/5 dark:hover:bg-accent/10',
+              'group-hover:shadow-sm dark:group-hover:shadow-accent/5'
+            )}
+          >
             {/* Avatar */}
-            <div 
+            <div
               className={cn(
                 'h-8 w-8 rounded-full',
                 'bg-primary/10 dark:bg-primary/20',
@@ -159,19 +156,17 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
             <div className="flex-1 min-w-0">
               {/* Message Header */}
               <div className="flex items-baseline gap-2 mb-0.5">
-                <span className={cn(
-                  'font-semibold',
-                  'text-foreground',
-                  'hover:text-foreground/90',
-                  'cursor-pointer'
-                )}>
+                <span
+                  className={cn(
+                    'font-semibold',
+                    'text-foreground',
+                    'hover:text-foreground/90',
+                    'cursor-pointer'
+                  )}
+                >
                   {group.userName}
                 </span>
-                <span className={cn(
-                  'text-xs',
-                  'text-muted-foreground/80',
-                  'font-medium'
-                )}>
+                <span className={cn('text-xs', 'text-muted-foreground/80', 'font-medium')}>
                   {group.timestamp}
                 </span>
               </div>
@@ -179,10 +174,7 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
               {/* Message Content */}
               <div className="space-y-1">
                 {group.messages.map((message, messageIndex) => (
-                  <div 
-                    key={message.id}
-                    className="flex items-start gap-2"
-                  >
+                  <div key={message.id} className="flex items-start gap-2">
                     <div
                       className={cn(
                         'flex-1',
@@ -195,22 +187,20 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
                       {message.content}
                     </div>
                     {/* Message Status */}
-                    <div className={cn(
-                      'flex items-center',
-                      'text-xs',
-                      message.status === 'error' ? 'text-destructive' : 'text-muted-foreground/60',
-                      'transition-opacity duration-200',
-                      'opacity-0 group-hover:opacity-100'
-                    )}>
-                      {message.status === 'sending' && (
-                        <Loader2 className="w-3 h-3 animate-spin" />
+                    <div
+                      className={cn(
+                        'flex items-center',
+                        'text-xs',
+                        message.status === 'error'
+                          ? 'text-destructive'
+                          : 'text-muted-foreground/60',
+                        'transition-opacity duration-200',
+                        'opacity-0 group-hover:opacity-100'
                       )}
-                      {message.status === 'sent' && (
-                        <Check className="w-3 h-3" />
-                      )}
-                      {message.status === 'error' && (
-                        <AlertCircle className="w-3 h-3" />
-                      )}
+                    >
+                      {message.status === 'sending' && <Loader2 className="w-3 h-3 animate-spin" />}
+                      {message.status === 'sent' && <Check className="w-3 h-3" />}
+                      {message.status === 'error' && <AlertCircle className="w-3 h-3" />}
                     </div>
                   </div>
                 ))}
@@ -219,7 +209,7 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
           </div>
         </div>
       ))}
-      
+
       {/* Scroll to bottom button */}
       {showScrollButton && (
         <button
@@ -239,7 +229,7 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
           <span className="text-sm font-medium">Latest</span>
         </button>
       )}
-      
+
       <div ref={messagesEndRef} />
     </div>
   )
@@ -259,4 +249,4 @@ function formatMessageTime(date: Date): string {
 // Helper function to get minutes difference between two dates
 function getMinutesDifference(date1: Date, date2: Date): number {
   return Math.abs(date2.getTime() - date1.getTime()) / (1000 * 60)
-} 
+}

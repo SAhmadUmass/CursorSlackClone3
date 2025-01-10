@@ -21,7 +21,7 @@ export function useRealtimeChannels() {
         (payload) => {
           const newChannel = payload.new as Channel
           // Only add if the channel doesn't already exist
-          if (!channels.some(channel => channel.id === newChannel.id)) {
+          if (!channels.some((channel) => channel.id === newChannel.id)) {
             addChannel(newChannel)
           }
         }
@@ -56,4 +56,4 @@ export function useRealtimeChannels() {
       channelSubscription.unsubscribe()
     }
   }, [channels, addChannel, updateChannel, deleteChannel])
-} 
+}

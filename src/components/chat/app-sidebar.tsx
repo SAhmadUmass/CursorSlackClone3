@@ -23,29 +23,32 @@ export function AppSidebar() {
   // Fetch current user
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       setCurrentUser(user)
     }
     fetchUser()
   }, [supabase])
 
   return (
-    <div className={cn(
-      'w-64 bg-card h-screen',
-      'border-r border-border',
-      'flex flex-col',
-      'transition-all duration-200 ease-in-out'
-    )}>
+    <div
+      className={cn(
+        'w-64 bg-card h-screen',
+        'border-r border-border',
+        'flex flex-col',
+        'transition-all duration-200 ease-in-out'
+      )}
+    >
       {/* Header */}
-      <div className={cn(
-        'p-4 border-b border-border',
-        'flex items-center justify-between'
-      )}>
-        <h1 className={cn(
-          'text-xl font-bold tracking-tight',
-          'text-foreground',
-          'animate-in fade-in-50 duration-500'
-        )}>
+      <div className={cn('p-4 border-b border-border', 'flex items-center justify-between')}>
+        <h1
+          className={cn(
+            'text-xl font-bold tracking-tight',
+            'text-foreground',
+            'animate-in fade-in-50 duration-500'
+          )}
+        >
           ChatGenius
         </h1>
         <div className="flex items-center gap-2">
@@ -76,10 +79,7 @@ export function AppSidebar() {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         {/* Direct Messages Section */}
-        <div className={cn(
-          'p-4',
-          'animate-in fade-in-50 duration-500 delay-100'
-        )}>
+        <div className={cn('p-4', 'animate-in fade-in-50 duration-500 delay-100')}>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Direct Messages
@@ -93,10 +93,7 @@ export function AppSidebar() {
         </div>
 
         {/* Channels Section */}
-        <div className={cn(
-          'p-4',
-          'animate-in fade-in-50 duration-500 delay-200'
-        )}>
+        <div className={cn('p-4', 'animate-in fade-in-50 duration-500 delay-200')}>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Channels
@@ -111,30 +108,32 @@ export function AppSidebar() {
       </div>
 
       {/* User Section */}
-      <div className={cn(
-        'p-4 border-t border-border',
-        'bg-card/50',
-        'animate-in fade-in-50 duration-500 delay-300'
-      )}>
+      <div
+        className={cn(
+          'p-4 border-t border-border',
+          'bg-card/50',
+          'animate-in fade-in-50 duration-500 delay-300'
+        )}
+      >
         <div className="flex items-center gap-3">
-          <div className={cn(
-            'h-8 w-8 rounded-full',
-            'bg-primary/10',
-            'flex items-center justify-center',
-            'text-sm font-medium text-primary'
-          )}>
+          <div
+            className={cn(
+              'h-8 w-8 rounded-full',
+              'bg-primary/10',
+              'flex items-center justify-center',
+              'text-sm font-medium text-primary'
+            )}
+          >
             {currentUser?.user_metadata?.full_name?.charAt(0) || 'U'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">
               {currentUser?.user_metadata?.full_name || 'Loading...'}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
-              Online
-            </p>
+            <p className="text-xs text-muted-foreground truncate">Online</p>
           </div>
         </div>
       </div>
     </div>
   )
-} 
+}

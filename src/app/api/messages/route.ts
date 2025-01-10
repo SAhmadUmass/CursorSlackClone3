@@ -6,27 +6,25 @@ export async function GET(request: NextRequest) {
 
   try {
     // Check if user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const channelId = request.nextUrl.searchParams.get('channelId')
-    
+
     if (!channelId) {
-      return NextResponse.json(
-        { success: false, error: 'Channel ID is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, error: 'Channel ID is required' }, { status: 400 })
     }
 
     const { data: messages, error } = await supabase
       .from('messages')
-      .select(`
+      .select(
+        `
         id,
         channel_id,
         user_id,
@@ -39,7 +37,8 @@ export async function GET(request: NextRequest) {
           full_name,
           avatar_url
         )
-      `)
+      `
+      )
       .eq('channel_id', channelId)
       .order('created_at', { ascending: true })
 
@@ -48,14 +47,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform messages to handle potentially missing user data
-    const transformedMessages = messages.map(message => ({
+    const transformedMessages = messages.map((message) => ({
       ...message,
       user: message.user || {
         id: message.user_id,
         email: '',
         full_name: 'Unknown User',
-        avatar_url: null
-      }
+        avatar_url: null,
+      },
     }))
 
     return NextResponse.json({
@@ -64,10 +63,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch messages' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Failed to fetch messages' }, { status: 500 })
   }
 }
 
@@ -76,23 +72,20 @@ export async function POST(request: NextRequest) {
 
   try {
     // Check if user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const { channelId, content, userId, clientGeneratedId } = await request.json()
 
     // Verify that the userId matches the authenticated user
     if (userId !== user.id) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user ID' },
-        { status: 403 }
-      )
+      return NextResponse.json({ success: false, error: 'Invalid user ID' }, { status: 403 })
     }
 
     if (!channelId || !content || !clientGeneratedId) {
@@ -113,7 +106,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: existingMessage,
-        duplicate: true
+        duplicate: true,
       })
     }
 
@@ -124,10 +117,11 @@ export async function POST(request: NextRequest) {
           channel_id: channelId,
           user_id: user.id,
           content,
-          client_generated_id: clientGeneratedId
+          client_generated_id: clientGeneratedId,
         },
       ])
-      .select(`
+      .select(
+        `
         id,
         channel_id,
         user_id,
@@ -140,7 +134,8 @@ export async function POST(request: NextRequest) {
           full_name,
           avatar_url
         )
-      `)
+      `
+      )
       .single()
 
     if (error) {
@@ -154,8 +149,8 @@ export async function POST(request: NextRequest) {
         id: message.user_id,
         email: '',
         full_name: 'Unknown User',
-        avatar_url: null
-      }
+        avatar_url: null,
+      },
     }
 
     return NextResponse.json({
@@ -164,9 +159,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to create message' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Failed to create message' }, { status: 500 })
   }
-} 
+}

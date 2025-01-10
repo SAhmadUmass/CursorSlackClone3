@@ -110,4 +110,4 @@ export const unsubscribeFromChannel = async (
   channel: ReturnType<typeof supabase.channel>
 ) => {
   await supabase.removeChannel(channel)
-} 
+}

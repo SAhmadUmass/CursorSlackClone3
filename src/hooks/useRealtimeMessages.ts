@@ -52,7 +52,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
           // Fetch the complete message with user data
           const { data, error } = await supabase
             .from('messages')
-            .select(`
+            .select(
+              `
               id,
               channel_id,
               user_id,
@@ -66,7 +67,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 avatar_url,
                 created_at
               )
-            `)
+            `
+            )
             .eq('id', payload.new.id)
             .single<MessageResponse>()
 
@@ -75,7 +77,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
             const existingMessage = messages.find(
               (m) => m.client_generated_id === data.client_generated_id
             )
-            
+
             if (!existingMessage) {
               const message: Message = {
                 id: data.id,
@@ -84,7 +86,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 content: data.content,
                 created_at: data.created_at,
                 client_generated_id: data.client_generated_id,
-                user: data.user
+                user: data.user,
               }
               addMessage(message)
               // Mark message as processed
@@ -105,7 +107,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
           // Fetch the updated message with user data
           const { data, error } = await supabase
             .from('messages')
-            .select(`
+            .select(
+              `
               id,
               channel_id,
               user_id,
@@ -119,7 +122,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
                 avatar_url,
                 created_at
               )
-            `)
+            `
+            )
             .eq('id', payload.new.id)
             .single<MessageResponse>()
 
@@ -131,7 +135,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
               content: data.content,
               created_at: data.created_at,
               client_generated_id: data.client_generated_id,
-              user: data.user
+              user: data.user,
             }
             updateMessage(message)
           }
@@ -155,4 +159,4 @@ export const useRealtimeMessages = (channelId: string | null) => {
       supabase.removeChannel(channel)
     }
   }, [channelId, addMessage, updateMessage, deleteMessage, messages])
-} 
+}

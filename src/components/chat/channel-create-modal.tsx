@@ -1,5 +1,11 @@
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,9 +29,7 @@ export const ChannelCreateModal = ({ className }: ChannelCreateModalProps) => {
   const [formData, setFormData] = useState<FormData>({ name: '', description: '' })
   const addChannel = useChatStore((state) => state.addChannel)
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
@@ -61,11 +65,7 @@ export const ChannelCreateModal = ({ className }: ChannelCreateModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`w-full justify-start gap-2 ${className}`}
-        >
+        <Button variant="ghost" size="sm" className={`w-full justify-start gap-2 ${className}`}>
           <PlusIcon className="h-4 w-4" />
           <span>Create Channel</span>
         </Button>
@@ -116,4 +116,4 @@ export const ChannelCreateModal = ({ className }: ChannelCreateModalProps) => {
       </DialogContent>
     </Dialog>
   )
-} 
+}

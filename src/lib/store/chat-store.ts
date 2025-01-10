@@ -65,4 +65,4 @@ export const useChatStore = create<ChatStore>((set) => ({
       currentChannel: state.currentChannel?.id === channelId ? null : state.currentChannel,
       messages: state.messages.filter((msg) => msg.channel_id !== channelId),
     })),
-})) 
+}))

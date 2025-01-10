@@ -17,7 +17,9 @@ export const ChannelList = () => {
 
   useEffect(() => {
     async function getCurrentUser() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       setCurrentUserId(user?.id || null)
     }
     getCurrentUser()
@@ -32,20 +34,14 @@ export const ChannelList = () => {
       {sortedChannels.map((channel) => {
         const isActive = currentChannel?.id === channel.id
         const canDelete = currentUserId && channel.created_by === currentUserId
-        
+
         return (
-          <div
-            key={channel.id}
-            className="group flex items-center gap-2 px-2"
-          >
+          <div key={channel.id} className="group flex items-center gap-2 px-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setCurrentChannel(channel)}
-              className={cn(
-                'w-full justify-start gap-2 rounded-md',
-                isActive && 'bg-accent'
-              )}
+              className={cn('w-full justify-start gap-2 rounded-md', isActive && 'bg-accent')}
             >
               <Hash className="h-4 w-4" />
               <span className="truncate">{channel.name}</span>
@@ -69,4 +65,4 @@ export const ChannelList = () => {
       })}
     </div>
   )
-} 
+}

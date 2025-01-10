@@ -23,24 +23,28 @@ export function DMList({ className, activeDMId }: DMListProps) {
       try {
         const { data, error } = await supabase
           .from('dm_channels')
-          .select(`
+          .select(
+            `
             *,
             user1:user1_id(*),
             user2:user2_id(*)
-          `)
+          `
+          )
           .order('created_at', { ascending: false })
 
         if (error) throw error
 
         // Get current user to determine other user in each DM
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
-        
+        const {
+          data: { user: currentUser },
+        } = await supabase.auth.getUser()
+
         const transformedChannels = data.map((channel: any) => ({
           id: channel.id,
           created_at: channel.created_at,
           user1_id: channel.user1_id,
           user2_id: channel.user2_id,
-          other_user: channel.user1.id === currentUser?.id ? channel.user2 : channel.user1
+          other_user: channel.user1.id === currentUser?.id ? channel.user2 : channel.user1,
         }))
 
         setChannels(transformedChannels)
@@ -56,13 +60,17 @@ export function DMList({ className, activeDMId }: DMListProps) {
     // Subscribe to new DM channels
     const channel = supabase
       .channel('dm_channels')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'dm_channels'
-      }, () => {
-        fetchDMs()
-      })
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'dm_channels',
+        },
+        () => {
+          fetchDMs()
+        }
+      )
       .subscribe()
 
     return () => {
@@ -74,13 +82,7 @@ export function DMList({ className, activeDMId }: DMListProps) {
     return (
       <div className={cn('space-y-2 p-2', className)}>
         {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className={cn(
-              'h-12 rounded-md',
-              'animate-pulse bg-muted'
-            )}
-          />
+          <div key={i} className={cn('h-12 rounded-md', 'animate-pulse bg-muted')} />
         ))}
       </div>
     )
@@ -111,9 +113,7 @@ export function DMList({ className, activeDMId }: DMListProps) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-2">
-                <p className="text-sm font-medium truncate">
-                  {channel.other_user?.full_name}
-                </p>
+                <p className="text-sm font-medium truncate">{channel.other_user?.full_name}</p>
               </div>
             </div>
           </button>
@@ -121,11 +121,13 @@ export function DMList({ className, activeDMId }: DMListProps) {
       </div>
 
       {channels.length === 0 && (
-        <div className={cn(
-          'flex flex-col items-center justify-center',
-          'py-8 px-4',
-          'text-center text-sm text-muted-foreground'
-        )}>
+        <div
+          className={cn(
+            'flex flex-col items-center justify-center',
+            'py-8 px-4',
+            'text-center text-sm text-muted-foreground'
+          )}
+        >
           <MessageSquare className="h-8 w-8 mb-2 text-muted-foreground/50" />
           <p>No direct messages yet</p>
           <p className="text-xs">Start a conversation with someone!</p>
@@ -133,4 +135,4 @@ export function DMList({ className, activeDMId }: DMListProps) {
       )}
     </div>
   )
-} 
+}

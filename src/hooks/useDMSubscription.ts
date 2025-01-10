@@ -36,12 +36,7 @@ export function useDMSubscription({
   useEffect(() => {
     if (!userId || !onNewChannel || !onChannelUpdate) return
 
-    const subscription = subscribeToDMChannels(
-      supabase,
-      userId,
-      onNewChannel,
-      onChannelUpdate
-    )
+    const subscription = subscribeToDMChannels(supabase, userId, onNewChannel, onChannelUpdate)
 
     channelsSubscriptionRef.current = subscription
 
@@ -56,12 +51,7 @@ export function useDMSubscription({
   useEffect(() => {
     if (!channelId || !onNewMessage || !onMessageUpdate) return
 
-    const subscription = subscribeToDMMessages(
-      supabase,
-      channelId,
-      onNewMessage,
-      onMessageUpdate
-    )
+    const subscription = subscribeToDMMessages(supabase, channelId, onNewMessage, onMessageUpdate)
 
     messagesSubscriptionRef.current = subscription
 
@@ -76,10 +66,8 @@ export function useDMSubscription({
   useEffect(() => {
     if (!userId || !onPresenceChange) return
 
-    const subscription = subscribeToUserPresence(
-      supabase,
-      userId,
-      (isOnline) => onPresenceChange(userId, isOnline)
+    const subscription = subscribeToUserPresence(supabase, userId, (isOnline) =>
+      onPresenceChange(userId, isOnline)
     )
 
     presenceSubscriptionRef.current = subscription
@@ -90,4 +78,4 @@ export function useDMSubscription({
       }
     }
   }, [userId, onPresenceChange, supabase])
-} 
+}

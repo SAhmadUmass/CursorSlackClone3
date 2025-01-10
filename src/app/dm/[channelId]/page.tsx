@@ -61,7 +61,9 @@ export default function DMPage({ params }: DMPageProps) {
   // Fetch current user
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       setCurrentUser(user)
     }
     fetchUser()
@@ -70,16 +72,20 @@ export default function DMPage({ params }: DMPageProps) {
   useEffect(() => {
     const fetchDMChannel = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
         if (!user) return
 
         const { data: channel } = await supabase
           .from('dm_channels')
-          .select(`
+          .select(
+            `
             *,
             user1:user1_id(*),
             user2:user2_id(*)
-          `)
+          `
+          )
           .eq('id', channelId)
           .single()
 
@@ -96,25 +102,28 @@ export default function DMPage({ params }: DMPageProps) {
       try {
         const { data: messages, error } = await supabase
           .from('messages')
-          .select(`
+          .select(
+            `
             *,
             user:user_id(*)
-          `)
+          `
+          )
           .eq('dm_channel_id', channelId)
           .order('created_at', { ascending: true })
 
         if (error) throw error
 
-        const transformedMessages = messages?.map(msg => ({
-          ...msg,
-          channel_id: msg.dm_channel_id,
-          status: 'sent' as const
-        })) || []
+        const transformedMessages =
+          messages?.map((msg) => ({
+            ...msg,
+            channel_id: msg.dm_channel_id,
+            status: 'sent' as const,
+          })) || []
 
         setMessages(transformedMessages)
-        
+
         // Add all existing messages to processed set
-        messages?.forEach(msg => {
+        messages?.forEach((msg) => {
           if (msg.client_generated_id) {
             processedMessages.current.add(msg.client_generated_id)
           }
@@ -132,25 +141,29 @@ export default function DMPage({ params }: DMPageProps) {
     // Subscribe to new messages
     const channel = supabase
       .channel(`messages:${channelId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'messages',
-        filter: `dm_channel_id=eq.${channelId}`
-      }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          const newMessage = payload.new as DBMessage
-          if (!processedMessages.current.has(newMessage.client_generated_id)) {
-            const transformedMessage: Message = {
-              ...newMessage,
-              channel_id: newMessage.dm_channel_id,
-              status: 'sent' as const
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `dm_channel_id=eq.${channelId}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newMessage = payload.new as DBMessage
+            if (!processedMessages.current.has(newMessage.client_generated_id)) {
+              const transformedMessage: Message = {
+                ...newMessage,
+                channel_id: newMessage.dm_channel_id,
+                status: 'sent' as const,
+              }
+              setMessages((prev) => [...prev, transformedMessage])
+              processedMessages.current.add(newMessage.client_generated_id)
             }
-            setMessages(prev => [...prev, transformedMessage])
-            processedMessages.current.add(newMessage.client_generated_id)
           }
         }
-      })
+      )
       .subscribe()
 
     return () => {
@@ -182,11 +195,11 @@ export default function DMPage({ params }: DMPageProps) {
         id: currentUser.id,
         email: currentUser.email || '',
         full_name: currentUser.user_metadata?.full_name || 'Unknown User',
-        avatar_url: null
-      }
+        avatar_url: null,
+      },
     }
 
-    setMessages(prev => [...prev, tempMessage])
+    setMessages((prev) => [...prev, tempMessage])
 
     try {
       const { data, error } = await supabase
@@ -195,12 +208,14 @@ export default function DMPage({ params }: DMPageProps) {
           content: messageContent,
           user_id: currentUser.id,
           dm_channel_id: channelId,
-          client_generated_id: clientGeneratedId
+          client_generated_id: clientGeneratedId,
         })
-        .select(`
+        .select(
+          `
           *,
           user:user_id(*)
-        `)
+        `
+        )
         .single()
 
       if (error) throw error
@@ -208,23 +223,19 @@ export default function DMPage({ params }: DMPageProps) {
       const transformedMessage: Message = {
         ...data,
         channel_id: data.dm_channel_id,
-        status: 'sent' as const
+        status: 'sent' as const,
       }
 
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.client_generated_id === clientGeneratedId
-            ? transformedMessage
-            : msg
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.client_generated_id === clientGeneratedId ? transformedMessage : msg
         )
       )
     } catch (error) {
       console.error('Error sending message:', error)
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.client_generated_id === clientGeneratedId
-            ? { ...msg, status: 'error' as const }
-            : msg
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.client_generated_id === clientGeneratedId ? { ...msg, status: 'error' as const } : msg
         )
       )
     }
@@ -236,9 +247,7 @@ export default function DMPage({ params }: DMPageProps) {
       <div className="border-b px-6 py-4 flex items-center justify-between bg-background">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-sm font-medium text-primary">
-              {otherUserName.charAt(0)}
-            </span>
+            <span className="text-sm font-medium text-primary">{otherUserName.charAt(0)}</span>
           </div>
           <div>
             <h2 className="font-semibold text-base">{otherUserName}</h2>
@@ -253,13 +262,15 @@ export default function DMPage({ params }: DMPageProps) {
       </div>
 
       {/* Message Input - fixed at bottom */}
-      <div className={cn(
-        'w-full',
-        'border-t border-border',
-        'bg-background',
-        'fixed bottom-0 left-0 right-0',
-        'px-4 py-3'
-      )}>
+      <div
+        className={cn(
+          'w-full',
+          'border-t border-border',
+          'bg-background',
+          'fixed bottom-0 left-0 right-0',
+          'px-4 py-3'
+        )}
+      >
         <div className="flex items-center gap-3 max-w-[1200px] mx-auto">
           <input
             type="text"
@@ -305,4 +316,4 @@ export default function DMPage({ params }: DMPageProps) {
       <div className="h-16" />
     </div>
   )
-} 
+}

@@ -74,4 +74,4 @@ export const ChannelDeleteDialog = ({ channel, className }: ChannelDeleteDialogP
       </AlertDialogContent>
     </AlertDialog>
   )
-} 
+}

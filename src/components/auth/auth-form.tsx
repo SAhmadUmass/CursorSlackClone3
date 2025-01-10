@@ -33,12 +33,7 @@ const authFormSchema = z.object({
 
 export type AuthFormValues = z.infer<typeof authFormSchema>
 
-export function AuthForm({
-  type,
-  onSubmit,
-  className,
-  ...props
-}: AuthFormProps) {
+export function AuthForm({ type, onSubmit, className, ...props }: AuthFormProps) {
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
 
   const form = useForm<AuthFormValues>({
@@ -62,14 +57,17 @@ export function AuthForm({
   }
 
   return (
-    <div className={cn(
-      'w-full max-w-md mx-auto p-6 space-y-6',
-      'bg-white dark:bg-gray-900 rounded-xl shadow-lg',
-      'transform transition-all duration-300 ease-in-out',
-      'hover:shadow-xl',
-      'border border-gray-200 dark:border-gray-800',
-      className
-    )} {...props}>
+    <div
+      className={cn(
+        'w-full max-w-md mx-auto p-6 space-y-6',
+        'bg-white dark:bg-gray-900 rounded-xl shadow-lg',
+        'transform transition-all duration-300 ease-in-out',
+        'hover:shadow-xl',
+        'border border-gray-200 dark:border-gray-800',
+        className
+      )}
+      {...props}
+    >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           {type === 'signup' && (
@@ -154,7 +152,7 @@ export function AuthForm({
               </FormItem>
             )}
           />
-          <Button 
+          <Button
             className={cn(
               'w-full py-2.5',
               'bg-blue-600 hover:bg-blue-700',
@@ -163,19 +161,15 @@ export function AuthForm({
               'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               'flex items-center justify-center space-x-2'
-            )} 
-            type="submit" 
+            )}
+            type="submit"
             disabled={isLoading}
           >
-            {isLoading && (
-              <Icons.spinner className="h-4 w-4 animate-spin" />
-            )}
-            <span>
-              {type === 'signin' ? 'Sign In' : 'Sign Up'}
-            </span>
+            {isLoading && <Icons.spinner className="h-4 w-4 animate-spin" />}
+            <span>{type === 'signin' ? 'Sign In' : 'Sign Up'}</span>
           </Button>
         </form>
       </Form>
     </div>
   )
-} 
+}

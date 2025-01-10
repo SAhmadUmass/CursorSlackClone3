@@ -17,10 +17,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     <Button
       variant="ghost"
       size="icon"
-      className={cn(
-        'h-9 w-9 rounded-md hover:bg-accent hover:text-accent-foreground',
-        className
-      )}
+      className={cn('h-9 w-9 rounded-md hover:bg-accent hover:text-accent-foreground', className)}
       onClick={toggleTheme}
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
     >
@@ -39,4 +36,4 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       <span className="sr-only">Toggle theme</span>
     </Button>
   )
-} 
+}

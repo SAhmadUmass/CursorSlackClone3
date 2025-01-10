@@ -16,7 +16,15 @@ import { cn } from '@/lib/utils'
 export default function HomePage() {
   const router = useRouter()
   const supabase = createClient()
-  const { channels, currentChannel, messages, setChannels, setCurrentChannel, setMessages, addMessage } = useChatStore()
+  const {
+    channels,
+    currentChannel,
+    messages,
+    setChannels,
+    setCurrentChannel,
+    setMessages,
+    addMessage,
+  } = useChatStore()
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
@@ -28,7 +36,9 @@ export default function HomePage() {
   // Fetch user on mount
   useEffect(() => {
     async function getUser() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) {
         router.push('/sign-in')
         return
@@ -106,8 +116,8 @@ export default function HomePage() {
         id: user.id,
         email: user.email,
         full_name: user.user_metadata?.full_name || 'Unknown User',
-        avatar_url: null
-      }
+        avatar_url: null,
+      },
     }
 
     // Add temporary message
@@ -123,7 +133,7 @@ export default function HomePage() {
           channelId: currentChannel.id,
           content: messageContent,
           userId: user.id,
-          clientGeneratedId
+          clientGeneratedId,
         }),
       })
 
@@ -134,13 +144,13 @@ export default function HomePage() {
         addMessage({
           ...result.data,
           client_generated_id: clientGeneratedId,
-          status: 'sent' as const
+          status: 'sent' as const,
         })
       } else {
         // Update the temporary message with 'error' status
         addMessage({
           ...tempMessage,
-          status: 'error' as const
+          status: 'error' as const,
         })
         console.error('Failed to send message:', result.error)
       }
@@ -148,7 +158,7 @@ export default function HomePage() {
       // Update the temporary message with 'error' status
       addMessage({
         ...tempMessage,
-        status: 'error' as const
+        status: 'error' as const,
       })
       console.error('Failed to send message:', error)
     }
@@ -181,34 +191,37 @@ export default function HomePage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Channel Header */}
-        <header className={cn(
-          'h-14 border-b border-border',
-          'bg-card/50 backdrop-blur-sm',
-          'flex items-center',
-          'px-4',
-          'transition-colors duration-200',
-          'animate-in fade-in-50 duration-500'
-        )}>
-          <div className={cn(
-            'flex items-center gap-3',
-            'py-2.5'
-          )}>
-            <div className={cn(
-              'flex items-center justify-center',
-              'h-6 w-6',
-              'rounded-md',
-              'bg-primary/10 dark:bg-primary/20',
-              'transition-colors duration-200'
-            )}>
+        <header
+          className={cn(
+            'h-14 border-b border-border',
+            'bg-card/50 backdrop-blur-sm',
+            'flex items-center',
+            'px-4',
+            'transition-colors duration-200',
+            'animate-in fade-in-50 duration-500'
+          )}
+        >
+          <div className={cn('flex items-center gap-3', 'py-2.5')}>
+            <div
+              className={cn(
+                'flex items-center justify-center',
+                'h-6 w-6',
+                'rounded-md',
+                'bg-primary/10 dark:bg-primary/20',
+                'transition-colors duration-200'
+              )}
+            >
               <MessageCircle className="h-4 w-4 text-primary" />
             </div>
-            
+
             <div className="flex flex-col">
-              <h2 className={cn(
-                'text-base font-semibold',
-                'text-foreground',
-                'flex items-center gap-2'
-              )}>
+              <h2
+                className={cn(
+                  'text-base font-semibold',
+                  'text-foreground',
+                  'flex items-center gap-2'
+                )}
+              >
                 {currentChannel ? (
                   <>
                     <span className="text-primary">#</span>
@@ -219,10 +232,7 @@ export default function HomePage() {
                 )}
               </h2>
               {currentChannel && (
-                <p className={cn(
-                  'text-xs text-muted-foreground',
-                  'mt-0.5'
-                )}>
+                <p className={cn('text-xs text-muted-foreground', 'mt-0.5')}>
                   {messages.length} messages
                 </p>
               )}
@@ -234,16 +244,15 @@ export default function HomePage() {
         <MessageList messages={messages} />
 
         {/* Message Input */}
-        <div className={cn(
-          'p-4 border-t border-border',
-          'bg-card/50 backdrop-blur-sm',
-          'transition-colors duration-200',
-          'animate-in fade-in-50 duration-500'
-        )}>
-          <div className={cn(
-            'flex items-center gap-3',
-            'relative'
-          )}>
+        <div
+          className={cn(
+            'p-4 border-t border-border',
+            'bg-card/50 backdrop-blur-sm',
+            'transition-colors duration-200',
+            'animate-in fade-in-50 duration-500'
+          )}
+        >
+          <div className={cn('flex items-center gap-3', 'relative')}>
             <input
               type="text"
               value={newMessage}
@@ -285,30 +294,27 @@ export default function HomePage() {
               )}
             >
               <span>Send</span>
-              <svg 
+              <svg
                 className={cn(
                   'w-4 h-4',
                   'transition-transform duration-200',
                   'group-hover:translate-x-0.5'
                 )}
-                fill="none" 
-                viewBox="0 0 24 24" 
+                fill="none"
+                viewBox="0 0 24 24"
                 stroke="currentColor"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
                   d="M13 7l5 5m0 0l-5 5m5-5H6"
                 />
               </svg>
             </button>
           </div>
           {currentChannel && (
-            <div className={cn(
-              'text-xs text-muted-foreground/60',
-              'mt-2 ml-1'
-            )}>
+            <div className={cn('text-xs text-muted-foreground/60', 'mt-2 ml-1')}>
               Press Enter to send, Shift + Enter for new line
             </div>
           )}
@@ -316,4 +322,4 @@ export default function HomePage() {
       </div>
     </div>
   )
-} 
+}

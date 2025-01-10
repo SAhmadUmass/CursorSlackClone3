@@ -7,7 +7,13 @@ import { cn } from '@/lib/utils'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { UserSearch } from './user-search'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { MessageSquarePlus } from 'lucide-react'
 
 interface DMCreateProps {
@@ -23,7 +29,9 @@ export function DMCreate({ className }: DMCreateProps) {
 
   useEffect(() => {
     const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       setCurrentUserId(user?.id || null)
     }
     getCurrentUser()
@@ -33,7 +41,9 @@ export function DMCreate({ className }: DMCreateProps) {
     setIsLoading(true)
     try {
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
       // Create or get existing DM channel
@@ -43,9 +53,9 @@ export function DMCreate({ className }: DMCreateProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          other_user_id: selectedUser.id
-        })
-      }).then(res => res.json())
+          other_user_id: selectedUser.id,
+        }),
+      }).then((res) => res.json())
 
       if (error) throw error
 
@@ -65,11 +75,7 @@ export function DMCreate({ className }: DMCreateProps) {
         <Button
           variant="ghost"
           size="sm"
-          className={cn(
-            'w-full justify-start gap-2',
-            'text-muted-foreground',
-            className
-          )}
+          className={cn('w-full justify-start gap-2', 'text-muted-foreground', className)}
         >
           <MessageSquarePlus className="h-4 w-4" />
           <span>New Message</span>
@@ -80,12 +86,9 @@ export function DMCreate({ className }: DMCreateProps) {
           <DialogTitle>New Message</DialogTitle>
         </DialogHeader>
         <div className="mt-4">
-          <UserSearch
-            onSelect={handleUserSelect}
-            excludeUserId={currentUserId || undefined}
-          />
+          <UserSearch onSelect={handleUserSelect} excludeUserId={currentUserId || undefined} />
         </div>
       </DialogContent>
     </Dialog>
   )
-} 
+}

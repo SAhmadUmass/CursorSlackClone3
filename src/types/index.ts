@@ -54,4 +54,4 @@ export interface CreateDMChannelRequest {
 export interface SendDMMessageRequest {
   content: string
   client_generated_id: string
-} 
+}

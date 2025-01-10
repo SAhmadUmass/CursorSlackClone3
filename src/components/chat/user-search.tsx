@@ -59,13 +59,15 @@ export function UserSearch({ onSelect, excludeUserId, className }: UserSearchPro
           className="pl-9"
         />
       </div>
-      
+
       {users.length > 0 && (
-        <ul className={cn(
-          'rounded-md border bg-popover p-1',
-          'shadow-md',
-          'max-h-[300px] overflow-y-auto'
-        )}>
+        <ul
+          className={cn(
+            'rounded-md border bg-popover p-1',
+            'shadow-md',
+            'max-h-[300px] overflow-y-auto'
+          )}
+        >
           {users.map((user) => (
             <li key={user.id}>
               <button
@@ -78,12 +80,14 @@ export function UserSearch({ onSelect, excludeUserId, className }: UserSearchPro
                   'transition-colors duration-200'
                 )}
               >
-                <div className={cn(
-                  'h-8 w-8 rounded-full',
-                  'bg-primary/10 dark:bg-primary/20',
-                  'flex items-center justify-center',
-                  'text-sm font-medium text-primary'
-                )}>
+                <div
+                  className={cn(
+                    'h-8 w-8 rounded-full',
+                    'bg-primary/10 dark:bg-primary/20',
+                    'flex items-center justify-center',
+                    'text-sm font-medium text-primary'
+                  )}
+                >
                   {user.full_name.charAt(0)}
                 </div>
                 <div className="flex-1 text-left">
@@ -97,10 +101,8 @@ export function UserSearch({ onSelect, excludeUserId, className }: UserSearchPro
       )}
 
       {isLoading && (
-        <div className="text-sm text-muted-foreground text-center py-2">
-          Searching...
-        </div>
+        <div className="text-sm text-muted-foreground text-center py-2">Searching...</div>
       )}
     </div>
   )
-} 
+}

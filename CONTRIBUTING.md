@@ -14,27 +14,33 @@ Thank you for your interest in contributing to ChatGenius! This document provide
 ### Getting Started
 
 1. Clone the repository:
+
    ```bash
    git clone [repository-url]
    cd chat-genius
    ```
 
 2. Install dependencies:
+
    ```bash
    pnpm install
    ```
 
 3. Set up environment variables:
+
    ```bash
    cp .env.example .env.local
    ```
+
    Update `.env.local` with your Supabase credentials:
+
    ```
    NEXT_PUBLIC_SUPABASE_URL=your_project_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
    ```
 
 4. Set up the database:
+
    - Go to your Supabase project
    - Run the SQL commands from `Technical-PRD.md` to create tables and policies
 
@@ -89,17 +95,20 @@ src/
 ### Git Workflow
 
 1. Create a new branch for your feature:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
 2. Make your changes and commit them:
+
    ```bash
    git add .
    git commit -m "feat: your descriptive commit message"
    ```
 
 3. Push your changes:
+
    ```bash
    git push origin feature/your-feature-name
    ```
@@ -109,6 +118,7 @@ src/
 ### Commit Message Guidelines
 
 Follow the Conventional Commits specification:
+
 - `feat:` for new features
 - `fix:` for bug fixes
 - `docs:` for documentation changes
@@ -120,6 +130,7 @@ Follow the Conventional Commits specification:
 ## Testing
 
 1. Manual Testing
+
    - Test your changes in both light and dark mode
    - Verify mobile responsiveness
    - Check accessibility using keyboard navigation
@@ -133,4 +144,4 @@ Follow the Conventional Commits specification:
 
 - Check the Technical PRD for detailed documentation
 - Review existing components for patterns
-- Create an issue for questions or problems 
+- Create an issue for questions or problems

@@ -54,7 +54,9 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
 
   // Define public routes that don't require authentication
   const publicRoutes = ['/sign-in', '/sign-up', '/forgot-password', '/reset-password']
@@ -76,4 +78,4 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
-} 
+}
