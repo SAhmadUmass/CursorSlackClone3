@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AuthForm } from '@/components/auth/auth-form'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
 export default function SignInPage() {
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
   const [error, setError] = useState<string>('')
   const searchParams = useSearchParams()
   const message = searchParams.get('message')
