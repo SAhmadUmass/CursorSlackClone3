@@ -1,17 +1,20 @@
 import { useMemo } from 'react'
 import { Hash } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useChatStore } from '@/lib/store/chat-store'
+import { Channel } from '@/types'
 import { ChannelDeleteDialog } from './channel-delete-dialog'
 import { ChannelInfoDialog } from './channel-info-dialog'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 
-export const ChannelList = () => {
-  const channels = useChatStore((state) => state.channels)
-  const currentChannel = useChatStore((state) => state.currentChannel)
-  const setCurrentChannel = useChatStore((state) => state.setCurrentChannel)
+interface ChannelListProps {
+  channels: Channel[]
+  currentChannel: Channel | null
+  onChannelSelect: (channel: Channel) => void
+}
+
+export const ChannelList = ({ channels, currentChannel, onChannelSelect }: ChannelListProps) => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const supabase = createClient()
 
@@ -40,7 +43,7 @@ export const ChannelList = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentChannel(channel)}
+              onClick={() => onChannelSelect(channel)}
               className={cn('w-full justify-start gap-2 rounded-md', isActive && 'bg-accent')}
             >
               <Hash className="h-4 w-4" />

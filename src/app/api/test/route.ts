@@ -9,14 +9,14 @@ interface Channel {
 
 export async function GET() {
   try {
-    const { data, error } = await supabase
+    const { data: rawData, error } = await supabase
       .from('channels')
       .select(
         `
         name,
         messages:messages(count)
       `
-      ) as { data: Channel[]; error: any }
+      )
 
     if (error) {
       return NextResponse.json({
@@ -25,12 +25,15 @@ export async function GET() {
       }, { status: 500 })
     }
 
-    if (!data) {
+    if (!rawData) {
       return NextResponse.json({
         success: false,
         error: 'No data found'
       }, { status: 404 })
     }
+
+    // Explicitly cast the data as Channel[]
+    const data = rawData as Channel[]
 
     return NextResponse.json({
       success: true,

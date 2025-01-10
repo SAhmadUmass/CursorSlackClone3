@@ -10,8 +10,15 @@ import { ChannelList } from './channel-list'
 import { ChannelCreateModal } from './channel-create-modal'
 import { DMList } from './dm-list'
 import { DMCreate } from './dm-create'
+import { Channel } from '@/types'
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  channels: Channel[]
+  currentChannel: Channel | null
+  onChannelSelect: (channel: Channel) => void
+}
+
+export function AppSidebar({ channels, currentChannel, onChannelSelect }: AppSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
@@ -102,7 +109,7 @@ export function AppSidebar() {
 
           <div className="space-y-4">
             <ChannelCreateModal />
-            <ChannelList />
+            <ChannelList channels={channels} currentChannel={currentChannel} onChannelSelect={onChannelSelect} />
           </div>
         </div>
       </div>
