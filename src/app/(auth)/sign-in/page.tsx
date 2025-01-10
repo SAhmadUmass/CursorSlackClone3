@@ -7,6 +7,8 @@ import { AuthForm } from '@/components/auth/auth-form'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 
+export const dynamic = 'force-dynamic'
+
 export default function SignInPage() {
   const [supabase] = useState(() => createClient())
   const [error, setError] = useState<string>('')
