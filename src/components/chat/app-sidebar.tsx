@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { FC, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
@@ -18,8 +18,7 @@ export interface AppSidebarProps {
   onChannelSelect: (channel: Channel) => void
 }
 
-export function AppSidebar(props: AppSidebarProps) {
-  const { channels, currentChannel, onChannelSelect } = props
+const AppSidebar: FC<AppSidebarProps> = ({ channels, currentChannel, onChannelSelect }) => {
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
@@ -145,3 +144,5 @@ export function AppSidebar(props: AppSidebarProps) {
     </div>
   )
 }
+
+export default AppSidebar
