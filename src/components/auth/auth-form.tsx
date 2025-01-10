@@ -17,9 +17,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Icons } from '@/components/ui/icons'
 
-interface AuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
+interface AuthFormProps {
   type: 'signin' | 'signup'
   onSubmit: (data: AuthFormValues) => Promise<void>
+  className?: string
 }
 
 const authFormSchema = z.object({
@@ -33,7 +34,7 @@ const authFormSchema = z.object({
 
 export type AuthFormValues = z.infer<typeof authFormSchema>
 
-export function AuthForm({ type, onSubmit, className, ...props }: AuthFormProps) {
+export function AuthForm({ type, onSubmit, className }: AuthFormProps) {
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
 
   const form = useForm<AuthFormValues>({
@@ -66,7 +67,6 @@ export function AuthForm({ type, onSubmit, className, ...props }: AuthFormProps)
         'border border-gray-200 dark:border-gray-800',
         className
       )}
-      {...props}
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
