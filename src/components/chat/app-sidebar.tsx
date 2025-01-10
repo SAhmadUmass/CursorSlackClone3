@@ -12,13 +12,14 @@ import { DMList } from './dm-list'
 import { DMCreate } from './dm-create'
 import { Channel } from '@/types'
 
-interface AppSidebarProps {
+export interface AppSidebarProps {
   channels: Channel[]
   currentChannel: Channel | null
   onChannelSelect: (channel: Channel) => void
 }
 
-export function AppSidebar({ channels, currentChannel, onChannelSelect }: AppSidebarProps) {
+export function AppSidebar(props: AppSidebarProps) {
+  const { channels, currentChannel, onChannelSelect } = props
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
