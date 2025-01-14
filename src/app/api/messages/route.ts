@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { processMessageBackground } from '@/lib/rag/realtime'
+import { Message } from '@/types'
 
 export async function GET(request: NextRequest) {
   const supabase = createClient()
@@ -142,16 +144,24 @@ export async function POST(request: NextRequest) {
       throw error
     }
 
-    // Handle case where user data might be missing
-    const transformedMessage = {
-      ...message,
-      user: message.user || {
+    // Transform message with proper typing, handling the nested user data
+    const transformedMessage: Message = {
+      id: message.id,
+      channel_id: message.channel_id,
+      user_id: message.user_id,
+      content: message.content,
+      created_at: message.created_at,
+      client_generated_id: message.client_generated_id,
+      user: Array.isArray(message.user) ? message.user[0] : {
         id: message.user_id,
         email: '',
         full_name: 'Unknown User',
         avatar_url: null,
       },
     }
+
+    // Process embedding in background
+    processMessageBackground(transformedMessage)
 
     return NextResponse.json({
       success: true,

@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
-import { LogOut } from 'lucide-react'
+import { LogOut, Bot } from 'lucide-react'
 import { ChannelList } from './channel-list'
 import { ChannelCreateModal } from './channel-create-modal'
 import { DMList } from './dm-list'
@@ -85,6 +85,43 @@ const AppSidebar: FC<AppSidebarProps> = ({ channels, currentChannel, onChannelSe
 
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
+        {/* AI Chat Section */}
+        <div className={cn('p-4', 'animate-in fade-in-50 duration-500')}>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              AI Assistant
+            </h2>
+          </div>
+
+          <div className="space-y-1">
+            <button
+              onClick={() => router.push('/ai-chat')}
+              className={cn(
+                'w-full',
+                'flex items-center gap-3',
+                'px-4 py-2',
+                'hover:bg-accent/50',
+                'transition-colors duration-200',
+                'text-left',
+                'group',
+                pathname === '/ai-chat' && 'bg-accent/50'
+              )}
+            >
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Bot className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-sm font-medium truncate">AI Assistant</p>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  Ask about conversation history
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+
         {/* Direct Messages Section */}
         <div className={cn('p-4', 'animate-in fade-in-50 duration-500 delay-100')}>
           <div className="flex items-center justify-between mb-2">

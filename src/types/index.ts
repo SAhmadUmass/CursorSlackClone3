@@ -14,6 +14,18 @@ export interface Channel {
   created_at: string
 }
 
+export interface MessageSource {
+  id: string
+  content: string
+  created_at: string
+  channel_id?: string
+  dm_channel_id?: string
+  user: {
+    id: string
+    full_name: string
+  }
+}
+
 export interface Message {
   id: string
   content: string
@@ -29,6 +41,16 @@ export interface Message {
     full_name: string
     avatar_url: string | null
   }
+  // AI-specific fields
+  isAI?: boolean
+  sources?: MessageSource[]
+  error?: string
+}
+
+// Helper type for AI messages
+export type AIMessage = Message & {
+  isAI: true
+  sources?: MessageSource[]
 }
 
 export interface ChannelWithMessageCount extends Channel {
