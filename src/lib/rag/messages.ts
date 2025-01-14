@@ -51,7 +51,7 @@ export async function fetchMessageBatch(lastId?: string): Promise<MessageBatch> 
     }
 
     // Transform messages into the format we need for embeddings
-    const transformedMessages: MessageForEmbedding[] = (messages as MessageWithUser[]).map((msg) => ({
+    const transformedMessages: MessageForEmbedding[] = messages.map((msg: any) => ({
       id: msg.id,
       content: msg.content,
       metadata: {
@@ -59,7 +59,7 @@ export async function fetchMessageBatch(lastId?: string): Promise<MessageBatch> 
         channel_id: msg.channel_id,
         dm_channel_id: msg.dm_channel_id,
         created_at: msg.created_at,
-        user_name: msg.user?.full_name || 'Unknown User'
+        user_name: msg.user?.[0]?.full_name || 'Unknown User'
       }
     }))
 
