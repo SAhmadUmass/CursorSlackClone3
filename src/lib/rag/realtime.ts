@@ -20,8 +20,8 @@ export async function processMessageRealtime(message: Message): Promise<boolean>
       content: message.content,
       metadata: {
         user_id: message.user_id,
-        channel_id: message.channel_id,
-        dm_channel_id: message.dm_channel_id,
+        conversation_id: message.conversation_id,
+        conversation_type: message.conversation_type,
         created_at: message.created_at,
         user_name: message.user?.full_name || 'Unknown User'
       }

@@ -17,26 +17,23 @@ const index = pinecone.index(INDEX_NAME)
 /**
  * Clean metadata for Pinecone requirements
  * Pinecone only accepts string, number, boolean, or array of strings
+ * 
+ * Required fields for our schema:
+ * - content: string
+ * - user_id: string
+ * - user_name: string
+ * - conversation_id: string
+ * - conversation_type: 'channel' | 'dm'
+ * - timestamp: string (ISO date)
  */
 function cleanMetadata(metadata: Record<string, any>) {
-  const cleaned: Record<string, any> = {}
-  
-  for (const [key, value] of Object.entries(metadata)) {
-    if (value === null || value === undefined) {
-      continue // Skip null/undefined values
-    }
-    
-    if (
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      typeof value === 'boolean' ||
-      Array.isArray(value)
-    ) {
-      cleaned[key] = value
-    } else {
-      // Convert other types to string
-      cleaned[key] = String(value)
-    }
+  const cleaned: Record<string, any> = {
+    content: String(metadata.content || ''),
+    user_id: String(metadata.user_id || ''),
+    user_name: String(metadata.user_name || 'Unknown User'),
+    conversation_id: String(metadata.conversation_id || ''),
+    conversation_type: String(metadata.conversation_type || 'channel'),
+    timestamp: String(metadata.created_at || new Date().toISOString())
   }
   
   return cleaned

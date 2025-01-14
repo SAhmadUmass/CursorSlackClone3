@@ -78,7 +78,7 @@ export default function DMPage({ params }: DMPageProps) {
         if (!user) return
 
         const { data: channel } = await supabase
-          .from('dm_channels')
+          .from('conversations')
           .select(
             `
             *,
@@ -87,6 +87,7 @@ export default function DMPage({ params }: DMPageProps) {
           `
           )
           .eq('id', channelId)
+          .eq('type', 'dm')
           .single()
 
         if (channel) {
@@ -100,36 +101,14 @@ export default function DMPage({ params }: DMPageProps) {
 
     const fetchMessages = async () => {
       try {
-        const { data: messages, error } = await supabase
-          .from('messages')
-          .select(
-            `
-            *,
-            user:user_id(*)
-          `
-          )
-          .eq('dm_channel_id', channelId)
-          .order('created_at', { ascending: true })
+        const response = await fetch(`/api/conversations/${channelId}/messages?type=dm`)
+        const result = await response.json()
 
-        if (error) throw error
-
-        const transformedMessages =
-          messages?.map((msg) => ({
-            ...msg,
-            channel_id: msg.dm_channel_id,
-            status: 'sent' as const,
-          })) || []
-
-        setMessages(transformedMessages)
-
-        // Add all existing messages to processed set
-        messages?.forEach((msg) => {
-          if (msg.client_generated_id) {
-            processedMessages.current.add(msg.client_generated_id)
-          }
-        })
+        if (result.success) {
+          setMessages(result.data)
+        }
       } catch (error) {
-        console.error('Error fetching messages:', error)
+        console.error('Failed to fetch messages:', error)
       } finally {
         setIsLoading(false)
       }
@@ -179,65 +158,71 @@ export default function DMPage({ params }: DMPageProps) {
     const messageContent = newMessage
     setNewMessage('') // Clear input immediately
 
-    // Add to processed messages immediately
-    processedMessages.current.add(clientGeneratedId)
-
     // Create temporary message
-    const tempMessage: Message = {
+    const tempMessage = {
       id: clientGeneratedId,
-      channel_id: channelId,
+      conversation_id: channelId,
+      conversation_type: 'dm' as const,
       user_id: currentUser.id,
       content: messageContent,
       created_at: new Date().toISOString(),
       client_generated_id: clientGeneratedId,
-      status: 'sending',
+      status: 'sending' as const,
       user: {
         id: currentUser.id,
-        email: currentUser.email || '',
+        email: currentUser.email,
         full_name: currentUser.user_metadata?.full_name || 'Unknown User',
         avatar_url: null,
       },
     }
 
-    setMessages((prev) => [...prev, tempMessage])
+    // Add temporary message
+    setMessages((prev) => [tempMessage, ...prev])
 
     try {
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
+      const response = await fetch(`/api/conversations/${channelId}/messages?type=dm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           content: messageContent,
-          user_id: currentUser.id,
-          dm_channel_id: channelId,
           client_generated_id: clientGeneratedId,
-        })
-        .select(
-          `
-          *,
-          user:user_id(*)
-        `
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Update the temporary message with server data and 'sent' status
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.client_generated_id === clientGeneratedId
+              ? { ...result.data, status: 'sent' as const }
+              : msg
+          )
         )
-        .single()
-
-      if (error) throw error
-
-      const transformedMessage: Message = {
-        ...data,
-        channel_id: data.dm_channel_id,
-        status: 'sent' as const,
+      } else {
+        // Update the temporary message with 'error' status
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.client_generated_id === clientGeneratedId
+              ? { ...msg, status: 'error' as const }
+              : msg
+          )
+        )
+        console.error('Failed to send message:', result.error)
       }
-
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.client_generated_id === clientGeneratedId ? transformedMessage : msg
-        )
-      )
     } catch (error) {
-      console.error('Error sending message:', error)
+      // Update the temporary message with 'error' status
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.client_generated_id === clientGeneratedId ? { ...msg, status: 'error' as const } : msg
+          msg.client_generated_id === clientGeneratedId
+            ? { ...msg, status: 'error' as const }
+            : msg
         )
       )
+      console.error('Failed to send message:', error)
     }
   }
 

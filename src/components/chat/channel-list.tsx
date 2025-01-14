@@ -5,7 +5,7 @@ import { Channel } from '@/types'
 import { ChannelDeleteDialog } from './channel-delete-dialog'
 import { ChannelInfoDialog } from './channel-info-dialog'
 import { Button } from '@/components/ui/button'
-import { createClient } from '@/lib/supabase/client'
+import { useSupabase } from '@/app/providers'
 import { useEffect, useState } from 'react'
 
 interface ChannelListProps {
@@ -16,7 +16,7 @@ interface ChannelListProps {
 
 export const ChannelList = ({ channels, currentChannel, onChannelSelect }: ChannelListProps) => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = useSupabase()
 
   useEffect(() => {
     async function getCurrentUser() {
@@ -26,7 +26,7 @@ export const ChannelList = ({ channels, currentChannel, onChannelSelect }: Chann
       setCurrentUserId(user?.id || null)
     }
     getCurrentUser()
-  }, [])
+  }, [supabase])
 
   const sortedChannels = useMemo(() => {
     return [...channels].sort((a, b) => a.name.localeCompare(b.name))

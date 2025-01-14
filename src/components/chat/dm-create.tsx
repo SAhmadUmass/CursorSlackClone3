@@ -47,12 +47,13 @@ export function DMCreate({ className }: DMCreateProps) {
       if (!user) throw new Error('Not authenticated')
 
       // Create or get existing DM channel
-      const { data, error } = await fetch('/api/dm-channels', {
+      const { data, error } = await fetch('/api/conversations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          type: 'dm',
           other_user_id: selectedUser.id,
         }),
       }).then((res) => res.json())

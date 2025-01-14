@@ -8,14 +8,14 @@ export const subscribeToDMChannels = (
   onChannelUpdate: (channel: DMChannel) => void
 ) => {
   return supabase
-    .channel('dm_channels')
+    .channel('conversations')
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
-        table: 'dm_channels',
-        filter: `user1_id=eq.${userId},user2_id=eq.${userId}`,
+        table: 'conversations',
+        filter: `type=eq.dm,user1_id=eq.${userId},user2_id=eq.${userId}`,
       },
       (payload) => {
         onNewChannel(payload.new as DMChannel)
@@ -26,8 +26,8 @@ export const subscribeToDMChannels = (
       {
         event: 'UPDATE',
         schema: 'public',
-        table: 'dm_channels',
-        filter: `user1_id=eq.${userId},user2_id=eq.${userId}`,
+        table: 'conversations',
+        filter: `type=eq.dm,user1_id=eq.${userId},user2_id=eq.${userId}`,
       },
       (payload) => {
         onChannelUpdate(payload.new as DMChannel)
@@ -36,21 +36,22 @@ export const subscribeToDMChannels = (
     .subscribe()
 }
 
-export const subscribeToDMMessages = (
+export const subscribeToMessages = (
   supabase: SupabaseClient,
-  channelId: string,
+  conversationId: string,
+  conversationType: 'channel' | 'dm',
   onNewMessage: (message: Message) => void,
   onMessageUpdate: (message: Message) => void
 ) => {
   return supabase
-    .channel(`dm_messages:${channelId}`)
+    .channel(`messages:${conversationId}`)
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `dm_channel_id=eq.${channelId}`,
+        filter: `conversation_id=eq.${conversationId},conversation_type=eq.${conversationType}`,
       },
       (payload) => {
         onNewMessage(payload.new as Message)
@@ -62,7 +63,7 @@ export const subscribeToDMMessages = (
         event: 'UPDATE',
         schema: 'public',
         table: 'messages',
-        filter: `dm_channel_id=eq.${channelId}`,
+        filter: `conversation_id=eq.${conversationId},conversation_type=eq.${conversationType}`,
       },
       (payload) => {
         onMessageUpdate(payload.new as Message)

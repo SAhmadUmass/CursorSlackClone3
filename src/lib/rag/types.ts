@@ -5,8 +5,8 @@ export interface MessageForEmbedding {
   content: string
   metadata: {
     user_id: string
-    channel_id?: string
-    dm_channel_id?: string
+    conversation_id: string
+    conversation_type: 'channel' | 'dm'
     created_at: string
     user_name: string
   }
@@ -31,8 +31,8 @@ export interface EmbeddedMessage {
   metadata: {
     content: string
     user_id: string
-    channel_id?: string
-    dm_channel_id?: string
+    conversation_id: string
+    conversation_type: 'channel' | 'dm'
     created_at: string
     user_name: string
   }

@@ -19,7 +19,11 @@ export async function GET() {
     while (hasMore) {
       // 1. Fetch batch of messages
       const messageBatch = await fetchMessageBatch(lastId)
-      const messages = messageBatch.messages.filter(msg => msg.metadata.channel_id) // Only channel messages
+      // Filter messages - include both channel and DM messages
+      const messages = messageBatch.messages.filter(msg => 
+        msg.metadata.conversation_id && 
+        (msg.metadata.conversation_type === 'channel' || msg.metadata.conversation_type === 'dm')
+      )
       stats.totalMessages += messages.length
 
       if (messages.length > 0) {
@@ -46,10 +50,10 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       stats,
-      message: 'Completed uploading general channel messages to vector store'
+      message: 'Completed uploading messages to vector store'
     })
   } catch (error) {
-    console.error('Upload Error:', error)
+    console.error('Error uploading messages:', error)
     return NextResponse.json(
       {
         success: false,

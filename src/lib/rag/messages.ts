@@ -3,17 +3,19 @@ import { MessageBatch, MessageForEmbedding } from './types'
 
 const BATCH_SIZE = 100
 
-interface MessageWithUser {
+interface DbMessage {
   id: string
   content: string
   user_id: string
-  channel_id?: string
-  dm_channel_id?: string
+  conversation_id: string
+  conversation_type: 'channel' | 'dm'
   created_at: string
-  user: {
-    id: string
-    full_name: string
-  } | null
+  user: DbUser | null
+}
+
+interface DbUser {
+  id: string
+  full_name: string
 }
 
 export async function fetchMessageBatch(lastId?: string): Promise<MessageBatch> {
@@ -27,8 +29,8 @@ export async function fetchMessageBatch(lastId?: string): Promise<MessageBatch> 
         id,
         content,
         user_id,
-        channel_id,
-        dm_channel_id,
+        conversation_id,
+        conversation_type,
         created_at,
         user:users!messages_user_id_fkey (
           id,
@@ -44,22 +46,24 @@ export async function fetchMessageBatch(lastId?: string): Promise<MessageBatch> 
       query = query.gt('id', lastId)
     }
 
-    const { data: messages, error } = await query
+    const { data: rawMessages, error } = await query
 
     if (error) {
       throw error
     }
 
+    const messages = (rawMessages || []) as unknown as DbMessage[]
+
     // Transform messages into the format we need for embeddings
-    const transformedMessages: MessageForEmbedding[] = messages.map((msg: any) => ({
+    const transformedMessages: MessageForEmbedding[] = messages.map(msg => ({
       id: msg.id,
       content: msg.content,
       metadata: {
         user_id: msg.user_id,
-        channel_id: msg.channel_id,
-        dm_channel_id: msg.dm_channel_id,
+        conversation_id: msg.conversation_id,
+        conversation_type: msg.conversation_type,
         created_at: msg.created_at,
-        user_name: msg.user?.[0]?.full_name || 'Unknown User'
+        user_name: msg.user?.full_name || 'Unknown User'
       }
     }))
 

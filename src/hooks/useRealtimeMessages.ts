@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useChatStore } from '@/lib/store/chat-store'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Message } from '@/types'
+import { useChatStore } from '@/lib/store/chat-store'
 
 interface MessageResponse {
   id: string
-  channel_id: string
+  conversation_id: string
+  conversation_type: 'channel' | 'dm'
   user_id: string
   content: string
   created_at: string
@@ -19,29 +20,24 @@ interface MessageResponse {
   }
 }
 
-export const useRealtimeMessages = (channelId: string | null) => {
-  const supabase = createClient()
-  const { addMessage, updateMessage, deleteMessage, messages } = useChatStore()
+export const useRealtimeMessages = (conversationId: string | null, conversationType: 'channel' | 'dm') => {
+  const supabase = createClientComponentClient()
+  const { messages, addMessage, updateMessage, deleteMessage } = useChatStore()
   const processedMessages = useRef<Set<string>>(new Set())
 
-  // Reset processed messages when channel changes
   useEffect(() => {
-    processedMessages.current = new Set()
-  }, [channelId])
-
-  useEffect(() => {
-    if (!channelId) return
+    if (!conversationId) return
 
     // Subscribe to new messages
     const channel = supabase
-      .channel(`messages:${channelId}`)
+      .channel(`messages:${conversationId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `channel_id=eq.${channelId}`,
+          filter: `conversation_id=eq.${conversationId},conversation_type=eq.${conversationType}`,
         },
         async (payload) => {
           // Check if we've already processed this message
@@ -55,7 +51,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
             .select(
               `
               id,
-              channel_id,
+              conversation_id,
+              conversation_type,
               user_id,
               content,
               created_at,
@@ -75,13 +72,14 @@ export const useRealtimeMessages = (channelId: string | null) => {
           if (!error && data) {
             // Check if message already exists in the store
             const existingMessage = messages.find(
-              (m) => m.client_generated_id === data.client_generated_id
+              (m: Message) => m.client_generated_id === data.client_generated_id
             )
 
             if (!existingMessage) {
               const message: Message = {
                 id: data.id,
-                channel_id: data.channel_id,
+                conversation_id: data.conversation_id,
+                conversation_type: data.conversation_type,
                 user_id: data.user_id,
                 content: data.content,
                 created_at: data.created_at,
@@ -101,7 +99,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
           event: 'UPDATE',
           schema: 'public',
           table: 'messages',
-          filter: `channel_id=eq.${channelId}`,
+          filter: `conversation_id=eq.${conversationId},conversation_type=eq.${conversationType}`,
         },
         async (payload) => {
           // Fetch the updated message with user data
@@ -110,7 +108,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
             .select(
               `
               id,
-              channel_id,
+              conversation_id,
+              conversation_type,
               user_id,
               content,
               created_at,
@@ -130,7 +129,8 @@ export const useRealtimeMessages = (channelId: string | null) => {
           if (!error && data) {
             const message: Message = {
               id: data.id,
-              channel_id: data.channel_id,
+              conversation_id: data.conversation_id,
+              conversation_type: data.conversation_type,
               user_id: data.user_id,
               content: data.content,
               created_at: data.created_at,
@@ -147,7 +147,7 @@ export const useRealtimeMessages = (channelId: string | null) => {
           event: 'DELETE',
           schema: 'public',
           table: 'messages',
-          filter: `channel_id=eq.${channelId}`,
+          filter: `conversation_id=eq.${conversationId},conversation_type=eq.${conversationType}`,
         },
         (payload) => {
           deleteMessage(payload.old.id)
@@ -158,5 +158,9 @@ export const useRealtimeMessages = (channelId: string | null) => {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [channelId, addMessage, updateMessage, deleteMessage, messages])
+  }, [conversationId, conversationType, supabase, messages, addMessage, updateMessage, deleteMessage])
+
+  return {
+    processedMessages,
+  }
 }

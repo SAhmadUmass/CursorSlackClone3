@@ -22,7 +22,7 @@ export function DMList({ className, activeDMId }: DMListProps) {
     const fetchDMs = async () => {
       try {
         const { data, error } = await supabase
-          .from('dm_channels')
+          .from('conversations')
           .select(
             `
             *,
@@ -30,6 +30,7 @@ export function DMList({ className, activeDMId }: DMListProps) {
             user2:user2_id(*)
           `
           )
+          .eq('type', 'dm')
           .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -59,13 +60,14 @@ export function DMList({ className, activeDMId }: DMListProps) {
 
     // Subscribe to new DM channels
     const channel = supabase
-      .channel('dm_channels')
+      .channel('conversations')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'dm_channels',
+          table: 'conversations',
+          filter: 'type=eq.dm',
         },
         () => {
           fetchDMs()

@@ -33,141 +33,92 @@ If you don't find relevant context for a question, just respond normally as a he
 
 export async function POST(req: Request) {
   try {
-    console.log('AI Chat: Received request');
-    
     const supabase = createRouteHandlerClient({ cookies });
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
-      console.log('AI Chat: No session found');
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { query } = await req.json();
-    console.log('AI Chat: Query received:', query);
+    const { messages, conversation_id, conversation_type } = await req.json();
+    const lastMessage = messages[messages.length - 1];
 
-    if (!query) {
-      console.log('AI Chat: No query provided');
-      return NextResponse.json({ error: 'Query is required' }, { status: 400 });
-    }
-
-    // Initialize Pinecone
-    console.log('AI Chat: Initializing Pinecone');
-    const index = pinecone.Index(process.env.PINECONE_INDEX_TWO!);
-
-    // Get query embedding
-    console.log('AI Chat: Generating query embedding');
+    // Generate embedding for the query
     const queryEmbedding = await openai.embeddings.create({
-      model: "text-embedding-ada-002",
-      input: query,
+      model: 'text-embedding-ada-002',
+      input: lastMessage.content,
     });
 
-    // Search Pinecone with metadata
-    console.log('AI Chat: Searching Pinecone');
+    // Query Pinecone for similar messages
+    const index = pinecone.index('rag-fusion-101-1536');
     const queryResponse = await index.query({
       vector: queryEmbedding.data[0].embedding,
       topK: 5,
+      filter: {
+        conversation_id: conversation_id,
+        conversation_type: conversation_type
+      },
       includeMetadata: true,
     });
 
-    console.log('AI Chat: Found matches:', queryResponse.matches?.length);
-
-    // Transform matches into source citations
-    const sources: MessageSource[] = queryResponse.matches
-      ?.filter(match => match.metadata)
-      .map(match => ({
-        id: match.id,
-        content: match.metadata?.content as string,
-        created_at: match.metadata?.timestamp as string,
-        channel_id: match.metadata?.channel_id as string,
-        dm_channel_id: match.metadata?.dm_channel_id as string,
-        user: {
-          id: match.metadata?.user_id as string,
-          full_name: match.metadata?.user_name as string,
-        }
-      })) || [];
-
-    // Format source messages for context, including timestamps
-    const sourceMessages = sources.map(source => {
-      const date = new Date(source.created_at);
-      const timeAgo = getTimeAgo(date);
-      return `${source.user.full_name} (${timeAgo}): "${source.content}"`;
-    }).join('\n\n');
-
-    console.log('AI Chat: Generating response');
-    // Generate AI response
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: SYSTEM_PROMPT
-        },
-        {
-          role: "user",
-          content: `Here are some relevant messages from the conversation history:
-
-${sourceMessages}
-
-User's question: ${query}
-
-Provide a helpful response using this context. If the context isn't relevant to the question, you can say so.`
-        }
-      ],
-      temperature: 0.7, // Slightly creative but still focused
-      stream: true,
-    });
-
-    console.log('AI Chat: Streaming response');
-    // Return streaming response with sources
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          // First, send the sources
-          controller.enqueue(encoder.encode(JSON.stringify({ sources }) + '\n'));
-
-          // Then stream the AI response
-          for await (const chunk of response) {
-            const content = chunk.choices[0]?.delta?.content || '';
-            if (content) {
-              controller.enqueue(encoder.encode(content));
-            }
-          }
-          controller.close();
-        } catch (error) {
-          console.error('AI Chat: Streaming error:', error);
-          controller.error(error);
-        }
+    // Format relevant messages as sources
+    const sources: MessageSource[] = queryResponse.matches.map((match) => ({
+      id: match.id,
+      content: match.metadata?.content as string,
+      created_at: match.metadata?.timestamp as string,
+      conversation_id: match.metadata?.conversation_id as string,
+      conversation_type: match.metadata?.conversation_type as 'channel' | 'dm',
+      user: {
+        id: match.metadata?.user_id as string,
+        full_name: match.metadata?.user_name as string,
       },
+    }));
+
+    // Prepare conversation history for the AI
+    const conversationHistory = messages.map((msg: any) => ({
+      role: msg.isAI ? 'assistant' : 'user',
+      content: msg.content,
+    }));
+
+    // Add system prompt
+    const fullConversation = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...conversationHistory,
+    ];
+
+    // If we found relevant messages, add them as context
+    if (sources.length > 0) {
+      const contextMessage = {
+        role: 'system',
+        content: `Here are some relevant messages from the conversation:\n\n${sources
+          .map(
+            (s) =>
+              `[${new Date(s.created_at).toLocaleString()}] ${s.user.full_name}: ${s.content}`
+          )
+          .join('\n\n')}`,
+      };
+      fullConversation.splice(1, 0, contextMessage);
+    }
+
+    // Get AI response
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: fullConversation as any,
+      temperature: 0.7,
+      max_tokens: 500,
     });
 
-    return new Response(stream);
-
+    return NextResponse.json({
+      content: response.choices[0].message.content,
+      sources: sources.length > 0 ? sources : undefined,
+    });
   } catch (error) {
     console.error('AI Chat Error:', error);
-    console.error('AI Chat Error Details:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      type: error instanceof Error ? error.constructor.name : typeof error
-    });
-    return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to process message' },
+      { status: 500 }
+    );
   }
-}
-
-// Helper function to format timestamps
-function getTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return 'just now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-  });
 } 

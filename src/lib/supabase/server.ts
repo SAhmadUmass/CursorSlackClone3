@@ -12,6 +12,12 @@ export const createClient = () => {
         get(name: string) {
           return cookieStore.get(name)?.value
         },
+        set(name: string, value: string, options: { path: string; maxAge?: number }) {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove(name: string, options: { path: string }) {
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 })
+        },
       },
     }
   )

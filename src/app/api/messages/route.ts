@@ -3,7 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { processMessageBackground } from '@/lib/rag/realtime'
 import { Message } from '@/types'
 
+// @deprecated Use /api/conversations/[id]/messages instead
 export async function GET(request: NextRequest) {
+  console.warn('Deprecated: Use /api/conversations/[id]/messages?type=channel instead')
   const supabase = createClient()
 
   try {
@@ -69,7 +71,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// @deprecated Use /api/conversations/[id]/messages instead
 export async function POST(request: NextRequest) {
+  console.warn('Deprecated: Use /api/conversations/[id]/messages?type=channel instead')
   const supabase = createClient()
 
   try {

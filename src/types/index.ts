@@ -12,28 +12,31 @@ export interface Channel {
   description: string | null
   created_by: string
   created_at: string
+  messageCount?: number
 }
 
 export interface MessageSource {
   id: string
   content: string
   created_at: string
-  channel_id?: string
-  dm_channel_id?: string
+  conversation_id: string
+  conversation_type: ConversationType
   user: {
     id: string
     full_name: string
   }
 }
 
+export type ConversationType = 'channel' | 'dm' | 'ai'
+
 export interface Message {
   id: string
-  content: string
+  conversation_id: string
+  conversation_type: ConversationType
   user_id: string
-  channel_id?: string
-  dm_channel_id?: string
+  content: string
   created_at: string
-  client_generated_id?: string
+  client_generated_id: string
   status?: 'sending' | 'sent' | 'error'
   user: {
     id: string
@@ -59,11 +62,23 @@ export interface ChannelWithMessageCount extends Channel {
 
 export interface DMChannel {
   id: string
-  created_at: string
   user1_id: string
   user2_id: string
-  other_user?: User // The other user in the conversation
+  created_at: string
+  other_user?: {
+    id: string
+    email: string
+    full_name: string
+    avatar_url: string | null
+  }
 }
+
+// Helper type guards
+export const isChannelMessage = (message: Message): boolean => 
+  message.conversation_type === 'channel';
+
+export const isDMMessage = (message: Message): boolean => 
+  message.conversation_type === 'dm';
 
 export interface DMMessage extends Omit<Message, 'channel_id'> {
   dm_channel_id: string
