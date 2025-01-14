@@ -4,249 +4,229 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { Message } from '@/types'
 import { cn } from '@/lib/utils'
 import { format, isToday, isYesterday } from 'date-fns'
-import { ChevronDown, Check, Loader2, AlertCircle } from 'lucide-react'
+import { ChevronDown, Check, Loader2, AlertCircle, ChevronUp } from 'lucide-react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { Button } from '@/components/ui/button'
 
 interface MessageListProps {
   messages: Message[]
   isLoading?: boolean
+  onLoadMore?: () => void
+  hasMore?: boolean
+  className?: string
 }
 
 interface MessageGroup {
   userId: string
   userName: string
-  userInitial: string
+  userAvatar: string | null
   messages: Message[]
   timestamp: string
 }
 
-export function MessageList({ messages, isLoading = false }: MessageListProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [showScrollButton, setShowScrollButton] = useState(false)
+export function MessageList({ 
+  messages, 
+  isLoading,
+  onLoadMore,
+  hasMore = false,
+  className 
+}: MessageListProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [autoScroll, setAutoScroll] = useState(true)
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false)
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  // Check scroll position to show/hide button
-  const handleScroll = () => {
-    if (!containerRef.current) return
-
-    const { scrollTop, scrollHeight, clientHeight } = containerRef.current
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
-    setShowScrollButton(!isNearBottom)
-  }
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  // Message grouping logic
+  // Group messages by user and date
   const messageGroups = useMemo(() => {
     const groups: MessageGroup[] = []
-    let currentGroup: MessageGroup | undefined = undefined
+    let currentGroup: MessageGroup | null = null
 
     messages.forEach((message) => {
       const messageDate = new Date(message.created_at)
-      const userName = message.user?.full_name || 'Unknown User'
-      const userInitial = userName.charAt(0)
+      const timestamp = getMessageTimestamp(messageDate)
 
-      // Format timestamp
-      const timestamp = formatMessageTime(messageDate)
-
-      // Check if we should start a new group
-      const shouldStartNewGroup =
+      if (
         !currentGroup ||
         currentGroup.userId !== message.user_id ||
-        getMinutesDifference(
-          new Date(currentGroup.messages[currentGroup.messages.length - 1].created_at),
-          messageDate
-        ) > 5
-
-      if (shouldStartNewGroup) {
+        currentGroup.timestamp !== timestamp
+      ) {
         currentGroup = {
           userId: message.user_id,
-          userName,
-          userInitial,
-          messages: [message],
+          userName: message.user.full_name,
+          userAvatar: message.user.avatar_url,
+          messages: [],
           timestamp,
         }
         groups.push(currentGroup)
-      } else if (currentGroup) {
-        currentGroup.messages.push(message)
       }
+
+      currentGroup.messages.push(message)
     })
 
     return groups
   }, [messages])
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 p-4 space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className={cn('flex items-start gap-3', 'animate-pulse')}>
-            {/* Avatar Skeleton */}
-            <div className={cn('h-8 w-8 rounded-full', 'bg-muted')} />
+  // Handle scroll behavior
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
 
-            <div className="flex-1 space-y-2">
-              {/* Header Skeleton */}
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-24 bg-muted rounded" />
-                <div className="h-3 w-12 bg-muted rounded" />
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const atBottom = scrollHeight - scrollTop - clientHeight < 50
+      setAutoScroll(atBottom)
+      setShowScrollToBottom(!atBottom)
+
+      // Load more messages when scrolling to top
+      if (scrollTop === 0 && hasMore && !isLoading && onLoadMore) {
+        onLoadMore()
+      }
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [hasMore, isLoading, onLoadMore])
+
+  // Auto-scroll to bottom for new messages
+  useEffect(() => {
+    if (autoScroll && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+    }
+  }, [messages, autoScroll])
+
+  const scrollToBottom = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+      setAutoScroll(true)
+      setShowScrollToBottom(false)
+    }
+  }
+
+  return (
+    <div className={cn('relative flex-1 overflow-hidden', className)}>
+      {/* Loading indicator */}
+      {isLoading && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
+          <div className="bg-primary px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg">
+            <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" />
+            <span className="text-xs font-medium text-primary-foreground">Loading messages...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Messages container */}
+      <div
+        ref={scrollContainerRef}
+        className="h-full overflow-y-auto px-4 pt-4 space-y-6"
+      >
+        {/* Load more button */}
+        {hasMore && (
+          <div className="flex justify-center mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onLoadMore}
+              disabled={isLoading}
+              className="text-xs"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="h-3 w-3 mr-2" />
+                  Load more
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Message groups */}
+        {messageGroups.map((group, idx) => (
+          <div key={`${group.userId}-${idx}`} className="space-y-2">
+            <div className="flex items-center gap-2 sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-1">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                {group.userAvatar ? (
+                  <img
+                    src={group.userAvatar}
+                    alt={group.userName}
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-primary">
+                    {group.userName.charAt(0)}
+                  </span>
+                )}
               </div>
-              {/* Message Skeleton */}
-              <div className="space-y-1">
-                <div className="h-4 w-3/4 bg-muted rounded" />
-                <div className="h-4 w-1/2 bg-muted rounded" />
+              <div className="flex items-baseline gap-2">
+                <span className="font-medium text-sm">{group.userName}</span>
+                <span className="text-xs text-muted-foreground">{group.timestamp}</span>
               </div>
+            </div>
+            <div className="space-y-1 pl-10">
+              {group.messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={cn(
+                    'group relative',
+                    'text-sm text-foreground',
+                    'hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 transition-colors'
+                  )}
+                >
+                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                  {message.status === 'sending' && (
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1 text-muted-foreground bg-background/80 backdrop-blur-sm px-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="text-xs">Sending</span>
+                    </div>
+                  )}
+                  {message.status === 'sent' && (
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Check className="h-3 w-3 text-green-500" />
+                    </div>
+                  )}
+                  {message.status === 'error' && (
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1 text-destructive">
+                      <AlertCircle className="h-3 w-3" />
+                      <span className="text-xs">Error sending message</span>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         ))}
       </div>
-    )
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      onScroll={handleScroll}
-      className={cn(
-        'flex-1 overflow-y-auto',
-        'px-4 py-4',
-        'space-y-4',
-        'bg-background/50',
-        'relative'
-      )}
-    >
-      {messageGroups.map((group, index) => (
-        <div
-          key={group.messages[0].id}
-          className={cn(
-            'group relative',
-            'animate-in fade-in-50 duration-500',
-            index === 0 ? 'slide-in-from-bottom-4' : ''
-          )}
-        >
-          <div
-            className={cn(
-              'flex items-start gap-3',
-              'px-3 py-2',
-              'rounded-lg',
-              'transition-colors duration-200',
-              'hover:bg-accent/5 dark:hover:bg-accent/10',
-              'group-hover:shadow-sm dark:group-hover:shadow-accent/5'
-            )}
-          >
-            {/* Avatar */}
-            <div
-              className={cn(
-                'h-8 w-8 rounded-full',
-                'bg-primary/10 dark:bg-primary/20',
-                'flex items-center justify-center',
-                'text-sm font-medium text-primary',
-                'ring-2 ring-background',
-                'transition-transform duration-200',
-                'group-hover:scale-105'
-              )}
-            >
-              {group.userInitial}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              {/* Message Header */}
-              <div className="flex items-baseline gap-2 mb-0.5">
-                <span
-                  className={cn(
-                    'font-semibold',
-                    'text-foreground',
-                    'hover:text-foreground/90',
-                    'cursor-pointer'
-                  )}
-                >
-                  {group.userName}
-                </span>
-                <span className={cn('text-xs', 'text-muted-foreground/80', 'font-medium')}>
-                  {group.timestamp}
-                </span>
-              </div>
-
-              {/* Message Content */}
-              <div className="space-y-1">
-                {group.messages.map((message, messageIndex) => (
-                  <div key={message.id} className="flex items-start gap-2">
-                    <div
-                      className={cn(
-                        'flex-1',
-                        'text-foreground/90',
-                        'leading-normal',
-                        'break-words',
-                        messageIndex === group.messages.length - 1 ? 'pb-0.5' : ''
-                      )}
-                    >
-                      {message.content}
-                    </div>
-                    {/* Message Status */}
-                    <div
-                      className={cn(
-                        'flex items-center',
-                        'text-xs',
-                        message.status === 'error'
-                          ? 'text-destructive'
-                          : 'text-muted-foreground/60',
-                        'transition-opacity duration-200',
-                        'opacity-0 group-hover:opacity-100'
-                      )}
-                    >
-                      {message.status === 'sending' && <Loader2 className="w-3 h-3 animate-spin" />}
-                      {message.status === 'sent' && <Check className="w-3 h-3" />}
-                      {message.status === 'error' && <AlertCircle className="w-3 h-3" />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
 
       {/* Scroll to bottom button */}
-      {showScrollButton && (
+      {showScrollToBottom && (
         <button
           onClick={scrollToBottom}
           className={cn(
             'absolute bottom-4 right-4',
-            'p-2 rounded-full',
             'bg-primary text-primary-foreground',
+            'rounded-full p-2',
             'shadow-lg',
             'hover:bg-primary/90',
             'transition-all duration-200',
-            'animate-in fade-in-50 slide-in-from-bottom-4',
             'flex items-center gap-2'
           )}
         >
-          <ChevronDown className="w-4 h-4" />
-          <span className="text-sm font-medium">Latest</span>
+          <ChevronDown className="h-4 w-4" />
         </button>
       )}
-
-      <div ref={messagesEndRef} />
     </div>
   )
 }
 
-// Helper function to format message time
-function formatMessageTime(date: Date): string {
+function getMessageTimestamp(date: Date): string {
   if (isToday(date)) {
-    return format(date, 'h:mm a')
-  } else if (isYesterday(date)) {
-    return 'Yesterday at ' + format(date, 'h:mm a')
-  } else {
-    return format(date, 'MMM d, h:mm a')
+    return 'Today ' + format(date, 'h:mm a')
   }
-}
-
-// Helper function to get minutes difference between two dates
-function getMinutesDifference(date1: Date, date2: Date): number {
-  return Math.abs(date2.getTime() - date1.getTime()) / (1000 * 60)
+  if (isYesterday(date)) {
+    return 'Yesterday ' + format(date, 'h:mm a')
+  }
+  return format(date, 'MMM d, h:mm a')
 }

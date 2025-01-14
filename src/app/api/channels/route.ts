@@ -26,7 +26,7 @@ export async function GET() {
     if (userError) throw userError
     if (!user) throw new Error('User not authenticated')
 
-    // Fetch channels with message count
+    // Fetch channels with message count using new schema
     const { data: channels, error } = await supabase
       .from('channels')
       .select(
@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     if (userError) throw userError
     if (!user) throw new Error('User not authenticated')
 
-    // Create the channel
+    // Create the channel - conversation_refs will be maintained by trigger
     const { data: channel, error } = await supabase
       .from('channels')
       .insert({
@@ -140,7 +140,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Delete the channel
+    // Delete the channel - conversation_refs and messages will be cleaned up by triggers
     const { error } = await supabase.from('channels').delete().eq('id', channelId)
 
     if (error) throw error
