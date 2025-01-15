@@ -1,42 +1,115 @@
 'use client'
 
 import { FC, useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useRouter, usePathname } from 'next/navigation'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { cn } from '@/lib/utils'
 import { LogOut, Bot } from 'lucide-react'
-import { ChannelList } from './channel-list'
-import { ChannelCreateModal } from './channel-create-modal'
-import { DMList } from './dm-list'
-import { DMCreate } from './dm-create'
-import { Channel } from '@/types'
+import { ConversationChannelList } from './conversation-channel-list'
+import { ConversationChannelCreate } from './conversation-channel-create'
+import { ConversationDMList } from './conversation-dm-list'
+import { ConversationDMCreate } from './conversation-dm-create'
+import { Conversation } from '@/types'
+import { useChatStore } from '@/lib/store/chat-store'
+import { processConversations } from '@/lib/utils/conversations'
 
-export interface AppSidebarProps {
-  channels: Channel[]
-  currentChannel: Channel | null
-  onChannelSelect: (channel: Channel) => void
-}
-
-const AppSidebar: FC<AppSidebarProps> = ({ channels, currentChannel, onChannelSelect }) => {
+const AppSidebar: FC = () => {
   const router = useRouter()
   const pathname = usePathname()
-  const supabase = createClient()
+  const supabase = createClientComponentClient()
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const { conversations, setConversations, currentConversation, setCurrentConversation } = useChatStore()
 
-  // Extract channel ID from pathname
+  // Split conversations into channels and DMs
+  const channels = conversations.filter(conv => conv.type === 'channel')
+  const dms = conversations.filter(conv => conv.type === 'dm')
+
+  // Extract conversation ID from pathname
   const activeDMId = pathname?.startsWith('/dm/') ? pathname.split('/')[2] : undefined
 
-  // Fetch current user
+  // Fetch current user and conversations
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setCurrentUser(user)
+    const fetchUserAndConversations = async () => {
+      try {
+        console.log('Fetching user session...')
+        // Fetch user
+        const {
+          data: { session },
+          error: sessionError
+        } = await supabase.auth.getSession()
+
+        if (sessionError || !session?.user) {
+          console.error('Auth error:', sessionError)
+          router.push('/sign-in')
+          return
+        }
+
+        console.log('Session found:', session.user.email)
+        setCurrentUser(session.user)
+
+        // Fetch conversations
+        console.log('Fetching conversations...')
+        const response = await fetch('/api/conversations')
+        const data = await response.json()
+        
+        if (response.ok) {
+          const allConversations = processConversations(data)
+          setConversations(allConversations)
+        } else {
+          console.error('Failed to fetch conversations:', data.error)
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      }
     }
-    fetchUser()
-  }, [supabase])
+
+    fetchUserAndConversations()
+
+    // Set up auth state change listener
+    const {
+      data: { subscription: authSubscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        router.push('/sign-in')
+      } else if (session?.user) {
+        setCurrentUser(session.user)
+      }
+    })
+
+    // Set up real-time subscription for conversations
+    const conversationChannel = supabase
+      .channel('conversations-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversations'
+        },
+        async () => {
+          // Refetch conversations on any change
+          console.log('Real-time update received, fetching conversations...')
+          const response = await fetch('/api/conversations')
+          const data = await response.json()
+          if (response.ok) {
+            const allConversations = processConversations(data)
+            setConversations(allConversations)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      authSubscription.unsubscribe()
+      supabase.removeChannel(conversationChannel)
+    }
+  }, [supabase, setConversations, router])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   return (
     <div
@@ -48,134 +121,58 @@ const AppSidebar: FC<AppSidebarProps> = ({ channels, currentChannel, onChannelSe
       )}
     >
       {/* Header */}
-      <div className={cn('p-4 border-b border-border', 'flex items-center justify-between')}>
-        <h1
-          className={cn(
-            'text-xl font-bold tracking-tight',
-            'text-foreground',
-            'animate-in fade-in-50 duration-500'
-          )}
-        >
-          ChatGenius
-        </h1>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <button
-            onClick={async () => {
-              try {
-                await supabase.auth.signOut()
-                router.push('/sign-in')
-              } catch (error) {
-                console.error('Error signing out:', error)
-              }
-            }}
-            className={cn(
-              'p-2 rounded-md',
-              'text-muted-foreground hover:text-foreground',
-              'bg-transparent hover:bg-accent',
-              'transition-colors duration-200',
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
-            )}
-            title="Sign Out"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
+      <div className="p-4 border-b border-border">
+        <h1 className="text-lg font-semibold">Cursor Chat</h1>
+      </div>
+
+      {/* Channels Section */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-muted-foreground">Channels</h2>
+            <ConversationChannelCreate />
+          </div>
+          <ConversationChannelList
+            channels={channels}
+            currentChannel={currentConversation?.type === 'channel' ? currentConversation : null}
+            onChannelSelect={setCurrentConversation}
+          />
+        </div>
+
+        {/* DMs Section */}
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-muted-foreground">Direct Messages</h2>
+            <ConversationDMCreate />
+          </div>
+          <ConversationDMList
+            dms={dms}
+            currentDM={currentConversation?.type === 'dm' ? currentConversation : null}
+            onDMSelect={setCurrentConversation}
+          />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
-        {/* AI Chat Section */}
-        <div className={cn('p-4', 'animate-in fade-in-50 duration-500')}>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              AI Assistant
-            </h2>
-          </div>
-
-          <div className="space-y-1">
+      {/* Footer */}
+      <div className="p-4 border-t border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <button
               onClick={() => router.push('/ai-chat')}
-              className={cn(
-                'w-full',
-                'flex items-center gap-3',
-                'px-4 py-2',
-                'hover:bg-accent/50',
-                'transition-colors duration-200',
-                'text-left',
-                'group',
-                pathname === '/ai-chat' && 'bg-accent/50'
-              )}
+              className="p-2 hover:bg-accent rounded-md"
+              title="AI Chat"
             >
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Bot className="h-4 w-4 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-sm font-medium truncate">AI Assistant</p>
-                </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  Ask about conversation history
-                </p>
-              </div>
+              <Bot className="h-4 w-4" />
             </button>
           </div>
-        </div>
-
-        {/* Direct Messages Section */}
-        <div className={cn('p-4', 'animate-in fade-in-50 duration-500 delay-100')}>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Direct Messages
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            <DMCreate />
-            <DMList activeDMId={activeDMId} />
-          </div>
-        </div>
-
-        {/* Channels Section */}
-        <div className={cn('p-4', 'animate-in fade-in-50 duration-500 delay-200')}>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Channels
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            <ChannelCreateModal />
-            <ChannelList channels={channels} currentChannel={currentChannel} onChannelSelect={onChannelSelect} />
-          </div>
-        </div>
-      </div>
-
-      {/* User Section */}
-      <div
-        className={cn(
-          'p-4 border-t border-border',
-          'bg-card/50',
-          'animate-in fade-in-50 duration-500 delay-300'
-        )}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              'h-8 w-8 rounded-full',
-              'bg-primary/10',
-              'flex items-center justify-center',
-              'text-sm font-medium text-primary'
-            )}
+          <button
+            onClick={handleSignOut}
+            className="p-2 hover:bg-accent rounded-md"
+            title="Sign Out"
           >
-            {currentUser?.user_metadata?.full_name?.charAt(0) || 'U'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
-              {currentUser?.user_metadata?.full_name || 'Loading...'}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">Online</p>
-          </div>
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>

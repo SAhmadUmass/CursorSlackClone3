@@ -12,9 +12,10 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { PlusIcon } from 'lucide-react'
 import { useChatStore } from '@/lib/store/chat-store'
-import { Channel } from '@/types'
+import { Conversation } from '@/types'
+import { X } from 'lucide-react'
 
-interface ChannelCreateModalProps {
+interface ConversationChannelCreateProps {
   className?: string
 }
 
@@ -23,40 +24,44 @@ interface FormData {
   description: string
 }
 
-export const ChannelCreateModal = ({ className }: ChannelCreateModalProps) => {
+export const ConversationChannelCreate = ({ className }: ConversationChannelCreateProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState<FormData>({ name: '', description: '' })
-  const addChannel = useChatStore((state) => state.addChannel)
+  const { conversations, setConversations } = useChatStore()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name.trim()) return
-
     setIsLoading(true)
+
     try {
-      const response = await fetch('/api/channels', {
+      const response = await fetch('/api/conversations', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
+          type: 'channel',
           name: formData.name.trim(),
-          description: formData.description.trim(),
         }),
       })
 
-      const { success, data, error } = await response.json()
-      if (!success) throw new Error(error)
+      const data = await response.json()
 
-      addChannel(data as Channel)
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create channel')
+      }
+
+      setConversations([...conversations, data])
       setIsOpen(false)
       setFormData({ name: '', description: '' })
     } catch (error) {
-      console.error('Failed to create channel:', error)
+      console.error('Error creating channel:', error)
     } finally {
       setIsLoading(false)
     }
@@ -100,13 +105,12 @@ export const ChannelCreateModal = ({ className }: ChannelCreateModalProps) => {
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
+            <Button 
+              variant="ghost" 
+              className="h-8 w-8 p-0" 
               onClick={() => setIsOpen(false)}
-              disabled={isLoading}
             >
-              Cancel
+              <X className="h-4 w-4" />
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading ? 'Creating...' : 'Create Channel'}

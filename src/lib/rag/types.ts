@@ -1,45 +1,42 @@
-import { Message } from '@/types'
+import { ConversationType } from '@/types'
 
-export interface MessageForEmbedding {
-  id: string
-  content: string
-  metadata: {
-    user_id: string
-    channel_id?: string
-    dm_channel_id?: string
-    created_at: string
-    user_name: string
-  }
+export interface MessageMetadata {
+  conversation_id: string
+  conversation_type: ConversationType
+  conversation_name?: string
+  user_id: string
+  user_name?: string
+  created_at: string
+  updated_at?: string
 }
 
-export interface BatchProcessingResult {
-  success: boolean
-  processedCount: number
-  error?: string
-  lastProcessedId?: string
+export interface MessageVector {
+  id: string
+  content: string
+  embedding: number[]
+  metadata: MessageMetadata
 }
 
 export interface MessageBatch {
-  messages: MessageForEmbedding[]
-  hasMore: boolean
-  lastId?: string
+  messages: MessageVector[]
+  namespace: string
 }
 
-export interface EmbeddedMessage {
+export interface MessageSearchResult {
   id: string
-  values: number[]
-  metadata: {
-    content: string
-    user_id: string
-    channel_id?: string
-    dm_channel_id?: string
-    created_at: string
-    user_name: string
-  }
+  score: number
+  metadata: MessageMetadata
+  content: string
 }
 
-export interface EmbeddingBatchResult {
-  successful: EmbeddedMessage[]
-  failed: MessageForEmbedding[]
-  error?: string
+export interface MessageSearchResponse {
+  matches: MessageSearchResult[]
+  namespace: string
+}
+
+export interface MessageSearchOptions {
+  conversation_id?: string
+  conversation_type?: ConversationType
+  limit?: number
+  minScore?: number
 } 

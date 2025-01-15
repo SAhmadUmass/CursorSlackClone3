@@ -1,18 +1,16 @@
 import { Pinecone } from '@pinecone-database/pinecone'
-import { EmbeddedMessage } from './types'
+import { MessageVector } from './types'
+import { env } from '@/env.mjs'
 
-if (!process.env.PINECONE_API_KEY) {
-  throw new Error('PINECONE_API_KEY is not set')
-}
+// Only initialize Pinecone if all required environment variables are present
+const pinecone = env.PINECONE_API_KEY && env.PINECONE_ENVIRONMENT && env.PINECONE_INDEX
+  ? new Pinecone({
+      apiKey: env.PINECONE_API_KEY
+    })
+  : null
 
-const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY
-})
-
-const INDEX_NAME = 'rag-fusion-101-1536'
-
-// Get the index instance
-const index = pinecone.index(INDEX_NAME)
+// Get the index instance if Pinecone is initialized
+const index = pinecone?.index(env.PINECONE_INDEX || '')
 
 /**
  * Clean metadata for Pinecone requirements
@@ -43,26 +41,39 @@ function cleanMetadata(metadata: Record<string, any>) {
 }
 
 /**
- * Upsert embeddings to Pinecone
+ * Upsert vectors to Pinecone with proper namespace management
  */
-export async function upsertEmbeddings(messages: EmbeddedMessage[]) {
+export async function upsertVectors(vectors: MessageVector[], namespace: string) {
+  // Skip if Pinecone is not initialized
+  if (!index) {
+    console.warn('Pinecone is not initialized. Skipping vector upsert.')
+    return {
+      success: false,
+      count: 0,
+      reason: 'Pinecone not initialized'
+    }
+  }
+
   try {
-    const vectors = messages.map(message => ({
-      id: message.id,
-      values: message.values,
-      metadata: cleanMetadata(message.metadata)
+    const records = vectors.map(vector => ({
+      id: vector.id,
+      values: vector.embedding,
+      metadata: {
+        ...cleanMetadata(vector.metadata),
+        content: vector.content // Store content in metadata for retrieval
+      }
     }))
 
     // Upsert in batches of 100 (Pinecone's recommended batch size)
     const batchSize = 100
-    for (let i = 0; i < vectors.length; i += batchSize) {
-      const batch = vectors.slice(i, i + batchSize)
-      await index.upsert(batch)
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize)
+      await index.namespace(namespace).upsert(batch)
     }
 
     return {
       success: true,
-      count: vectors.length
+      count: records.length
     }
   } catch (error) {
     console.error('Error upserting to Pinecone:', error)
@@ -71,11 +82,20 @@ export async function upsertEmbeddings(messages: EmbeddedMessage[]) {
 }
 
 /**
- * Query Pinecone index
+ * Query Pinecone index with namespace support
  */
-export async function queryEmbeddings(vector: number[], topK: number = 5) {
+export async function queryVectors(vector: number[], namespace: string, topK: number = 5) {
+  // Skip if Pinecone is not initialized
+  if (!index) {
+    console.warn('Pinecone is not initialized. Skipping vector query.')
+    return {
+      matches: [],
+      namespace
+    }
+  }
+
   try {
-    const results = await index.query({
+    const results = await index.namespace(namespace).query({
       vector,
       topK,
       includeMetadata: true
@@ -89,11 +109,21 @@ export async function queryEmbeddings(vector: number[], topK: number = 5) {
 }
 
 /**
- * Delete embeddings from Pinecone
+ * Delete vectors from Pinecone with namespace support
  */
-export async function deleteEmbeddings(ids: string[]) {
+export async function deleteVectors(ids: string[], namespace: string) {
+  // Skip if Pinecone is not initialized
+  if (!index) {
+    console.warn('Pinecone is not initialized. Skipping vector deletion.')
+    return {
+      success: false,
+      count: 0,
+      reason: 'Pinecone not initialized'
+    }
+  }
+
   try {
-    await index.deleteMany(ids)
+    await index.namespace(namespace).deleteMany(ids)
     return {
       success: true,
       count: ids.length

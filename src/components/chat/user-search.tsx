@@ -1,108 +1,87 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User } from '@/types'
-import { cn } from '@/lib/utils'
-import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 interface UserSearchProps {
   onSelect: (user: User) => void
   excludeUserId?: string
-  className?: string
+  isLoading?: boolean
 }
 
-export function UserSearch({ onSelect, excludeUserId, className }: UserSearchProps) {
+export function UserSearch({ onSelect, excludeUserId, isLoading = false }: UserSearchProps) {
   const [query, setQuery] = useState('')
   const [users, setUsers] = useState<User[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [searchLoading, setSearchLoading] = useState(false)
   const supabase = createClientComponentClient()
 
-  const searchUsers = async (searchQuery: string) => {
-    if (!searchQuery.trim()) {
-      setUsers([])
-      return
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (!query.trim()) {
+        setUsers([])
+        return
+      }
+
+      setSearchLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, email, full_name, avatar_url, created_at')
+          .ilike('email', `%${query}%`)
+          .neq('id', excludeUserId || '')
+          .limit(10)
+
+        if (error) throw error
+        setUsers(data || [])
+      } catch (error) {
+        console.error('Error searching users:', error)
+      } finally {
+        setSearchLoading(false)
+      }
     }
 
-    setIsLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .ilike('full_name', `%${searchQuery}%`)
-        .neq('id', excludeUserId)
-        .limit(5)
-
-      if (error) throw error
-      setUsers(data || [])
-    } catch (error) {
-      console.error('Error searching users:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleSearch = (value: string) => {
-    setQuery(value)
-    searchUsers(value)
-  }
+    const debounce = setTimeout(searchUsers, 300)
+    return () => clearTimeout(debounce)
+  }, [query, excludeUserId, supabase])
 
   return (
-    <div className={cn('space-y-2', className)}>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search users..."
-          value={query}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="pl-9"
-        />
+    <div className="space-y-4">
+      <Input
+        placeholder="Search users..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        disabled={isLoading}
+      />
+      <div className="space-y-2">
+        {users.map((user) => (
+          <Button
+            key={user.id}
+            variant="ghost"
+            className="w-full justify-start gap-2"
+            onClick={() => onSelect(user)}
+            disabled={isLoading}
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarFallback>
+                {user.full_name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col items-start">
+              <span className="font-medium">{user.full_name}</span>
+              <span className="text-xs text-muted-foreground">{user.email}</span>
+            </div>
+          </Button>
+        ))}
+        {searchLoading && (
+          <div className="text-sm text-muted-foreground text-center py-2">
+            Searching...
+          </div>
+        )}
       </div>
-
-      {users.length > 0 && (
-        <ul
-          className={cn(
-            'rounded-md border bg-popover p-1',
-            'shadow-md',
-            'max-h-[300px] overflow-y-auto'
-          )}
-        >
-          {users.map((user) => (
-            <li key={user.id}>
-              <button
-                onClick={() => onSelect(user)}
-                className={cn(
-                  'w-full flex items-center gap-3',
-                  'px-3 py-2 rounded-sm',
-                  'text-sm',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  'transition-colors duration-200'
-                )}
-              >
-                <div
-                  className={cn(
-                    'h-8 w-8 rounded-full',
-                    'bg-primary/10 dark:bg-primary/20',
-                    'flex items-center justify-center',
-                    'text-sm font-medium text-primary'
-                  )}
-                >
-                  {user.full_name.charAt(0)}
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="font-medium">{user.full_name}</div>
-                  <div className="text-xs text-muted-foreground">{user.email}</div>
-                </div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {isLoading && (
-        <div className="text-sm text-muted-foreground text-center py-2">Searching...</div>
-      )}
     </div>
   )
 }

@@ -116,7 +116,8 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
         'px-4 py-4',
         'space-y-4',
         'bg-background/50',
-        'relative'
+        'relative',
+        'h-full max-h-[calc(100vh-8rem)]'
       )}
     >
       {messageGroups.map((group, index) => (
