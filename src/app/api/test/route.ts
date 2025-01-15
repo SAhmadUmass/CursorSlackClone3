@@ -1,22 +1,26 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase/config'
+import { ConversationType } from '@/types'
 
-// Add interface for the expected channel type
-interface Channel {
+// Add interface for the expected conversation type
+interface Conversation {
   name: string
+  type: ConversationType
   messages: { count: number }[]
 }
 
 export async function GET() {
   try {
     const { data: rawData, error } = await supabase
-      .from('channels')
+      .from('conversations')
       .select(
         `
         name,
+        type,
         messages:messages(count)
       `
       )
+      .eq('type', 'channel') // Only get channels for backward compatibility
 
     if (error) {
       return NextResponse.json({
@@ -32,14 +36,14 @@ export async function GET() {
       }, { status: 404 })
     }
 
-    // Explicitly cast the data as Channel[]
-    const data = rawData as Channel[]
+    // Explicitly cast the data as Conversation[]
+    const data = rawData as Conversation[]
 
     return NextResponse.json({
       success: true,
-      data: data.map((channel) => ({
-        name: channel.name,
-        messageCount: channel.messages[0]?.count || 0,
+      data: data.map((conversation) => ({
+        name: conversation.name,
+        messageCount: conversation.messages[0]?.count || 0,
       })),
     })
   } catch (error) {

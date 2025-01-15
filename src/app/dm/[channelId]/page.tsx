@@ -6,7 +6,12 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { Message } from '@/types'
 import { DMChatWindow } from '@/components/chat/conversations/dm/DMChatWindow'
 
+/**
+ * @deprecated Use /app/conversations/[id]/page.tsx instead.
+ * This page will be removed in a future version.
+ */
 export default function DMPage() {
+  console.warn('Deprecated: Use /conversations/[id] route instead')
   const params = useParams()
   const conversationId = params.channelId as string
   const supabase = createClientComponentClient()
