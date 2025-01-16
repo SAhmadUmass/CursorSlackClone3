@@ -1,71 +1,51 @@
 'use client'
 
 import { MessageCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useChatStore } from '@/lib/store/chat-store'
-import { Conversation } from '@/types'
 import { createClient } from '@/lib/supabase/client'
-import { useMessageSubscription } from '@/hooks/useMessageSubscription'
+import { useChatStore } from '@/lib/store/chat-store'
+import { useSubscriptions } from '@/hooks/useSubscriptions'
 import AppSidebar from '@/components/chat/app-sidebar'
 import { ChannelChatWindow } from '@/components/chat/conversations/channel/ChannelChatWindow'
 import { DMChatWindow } from '@/components/chat/conversations/dm/DMChatWindow'
-import { processConversations } from '@/lib/utils/conversations'
 
 export default function HomePage() {
   const router = useRouter()
   const supabase = createClient()
-  const {
-    conversations,
-    currentConversation,
-    setConversations,
-    setCurrentConversation,
-  } = useChatStore()
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const { currentConversation, setUser } = useChatStore()
 
-  // Fetch initial data
+  // Set up real-time subscriptions
+  useSubscriptions()
+
+  // Authentication effect
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
-        if (userError) throw userError
+    let mounted = true
 
-        if (user) {
+    const fetchUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (error || !user) {
+          router.push('/auth/sign-in')
+          return
+        }
+
+        if (mounted) {
           setUser(user)
-          await fetchConversations()
-        } else {
-          router.push('/login')
         }
       } catch (error) {
-        console.error('Error fetching initial data:', error)
-      } finally {
-        setLoading(false)
+        console.error('Error fetching user:', error)
+        router.push('/auth/sign-in')
       }
     }
 
-    fetchInitialData()
-  }, [])
+    fetchUser()
 
-  const fetchConversations = async () => {
-    try {
-      const response = await fetch('/api/conversations')
-      const data = await response.json()
-      
-      if (response.ok) {
-        const allConversations = processConversations(data)
-        setConversations(allConversations)
-      } else {
-        console.error('Error fetching conversations:', data.error)
-      }
-    } catch (error) {
-      console.error('Error fetching conversations:', error)
+    return () => {
+      mounted = false
     }
-  }
-
-  if (loading) {
-    return <div>Loading...</div>
-  }
+  }, []) // Empty dependency array - runs once on mount
 
   return (
     <div className="flex h-screen">

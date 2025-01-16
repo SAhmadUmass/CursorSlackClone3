@@ -19,7 +19,7 @@ interface MessageGroup {
   timestamp: string
 }
 
-export function MessageList({ messages, isLoading = false }: MessageListProps) {
+export function MessageList({ messages = [], isLoading = false }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [showScrollButton, setShowScrollButton] = useState(false)
@@ -47,7 +47,12 @@ export function MessageList({ messages, isLoading = false }: MessageListProps) {
     const groups: MessageGroup[] = []
     let currentGroup: MessageGroup | undefined = undefined
 
-    messages.forEach((message) => {
+    // Ensure messages is an array
+    const messageArray = Array.isArray(messages) ? messages : []
+
+    messageArray.forEach((message) => {
+      if (!message?.created_at || !message?.user_id) return // Skip invalid messages
+
       const messageDate = new Date(message.created_at)
       const userName = message.user?.full_name || 'Unknown User'
       const userInitial = userName.charAt(0)

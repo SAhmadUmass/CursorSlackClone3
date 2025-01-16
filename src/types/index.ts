@@ -1,12 +1,16 @@
-export type ConversationType = 'channel' | 'dm'
+export type ConversationType = 'dm' | 'channel' | 'ai'
 
 export interface Conversation {
   id: string
   type: ConversationType
-  name: string | null
-  description: string | null
-  created_by: string
   created_at: string
+  created_by: string
+  name?: string
+  description?: string
+  is_private?: boolean
+  creator?: User
+  members?: User[]
+  last_message?: Message
 }
 
 export interface Message {
@@ -16,16 +20,11 @@ export interface Message {
   user_id: string
   content: string
   created_at: string
-  updated_at?: string
   client_generated_id: string
-  has_attachments?: boolean
   status?: 'sending' | 'sent' | 'error'
-  user?: {
-    id: string
-    email: string
-    full_name: string
-    avatar_url: string | null
-  }
+  error?: string
+  user: User
+  sources?: MessageSource[]
 }
 
 export interface User {
@@ -33,7 +32,6 @@ export interface User {
   email: string
   full_name: string
   avatar_url: string | null
-  created_at: string
 }
 
 export interface SendMessageRequest {
@@ -45,8 +43,6 @@ export interface MessageSource {
   id: string
   content: string
   created_at: string
-  conversation_id: string
-  conversation_type: ConversationType
   user: {
     id: string
     full_name: string

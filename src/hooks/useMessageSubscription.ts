@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useChatStore } from '@/lib/store/chat-store'
-import { Message, ConversationType } from '@/types'
+import { useChatStore, SubscriptionStatus } from '@/lib/store/chat-store'
+import { Message, ConversationType, User } from '@/types'
 import { messageCache } from '@/lib/cache/message-cache'
 import { subscriptionManager } from '@/lib/cache/subscription-manager'
 
@@ -13,36 +13,32 @@ interface MessageResponse {
   content: string
   created_at: string
   client_generated_id: string
-  has_attachments: boolean
-  user: {
-    id: string
-    email: string
-    full_name: string
-    avatar_url: string | null
-  }
+  user: User
 }
 
 interface UseMessageSubscriptionProps {
   conversationId: string
-  conversationType: ConversationType
   onNewMessage?: (message: Message) => void
   onMessageUpdate?: (message: Message) => void
   onMessageDelete?: (messageId: string) => void
   onPresenceChange?: (userId: string, isOnline: boolean) => void
-  onSubscriptionStatusChange?: (status: 'connecting' | 'connected' | 'disconnected' | 'error') => void
+}
+
+interface UseMessageSubscriptionResult {
+  messages: Message[]
+  subscriptionStatus: SubscriptionStatus | undefined
+  unsubscribe: () => void
 }
 
 export const useMessageSubscription = ({
   conversationId,
-  conversationType,
   onNewMessage,
   onMessageUpdate,
   onMessageDelete,
   onPresenceChange,
-  onSubscriptionStatusChange,
-}: UseMessageSubscriptionProps) => {
+}: UseMessageSubscriptionProps): UseMessageSubscriptionResult => {
   const supabase = createClient()
-  const { addMessage, updateMessage, deleteMessage } = useChatStore()
+  const { addMessage, updateMessage, deleteMessage, setSubscriptionStatus } = useChatStore()
   const messageSubscriptionRef = useRef<ReturnType<typeof supabase.channel>>()
   const presenceSubscriptionRef = useRef<ReturnType<typeof supabase.channel>>()
 
@@ -80,7 +76,6 @@ export const useMessageSubscription = ({
                 content,
                 created_at,
                 client_generated_id,
-                has_attachments,
                 user:users!messages_user_id_fkey (
                   id,
                   email,
@@ -101,7 +96,6 @@ export const useMessageSubscription = ({
                 content: data.content,
                 created_at: data.created_at,
                 client_generated_id: data.client_generated_id,
-                has_attachments: data.has_attachments,
                 user: data.user,
               }
 
@@ -133,7 +127,6 @@ export const useMessageSubscription = ({
                 content,
                 created_at,
                 client_generated_id,
-                has_attachments,
                 user:users!messages_user_id_fkey (
                   id,
                   email,
@@ -154,7 +147,6 @@ export const useMessageSubscription = ({
                 content: data.content,
                 created_at: data.created_at,
                 client_generated_id: data.client_generated_id,
-                has_attachments: data.has_attachments,
                 user: data.user,
               }
 
@@ -184,24 +176,21 @@ export const useMessageSubscription = ({
           'system',
           { event: 'SUBSCRIBED' },
           () => {
-            subscriptionManager.updateStatus(`messages:${conversationId}`, 'connected')
-            onSubscriptionStatusChange?.('connected')
+            setSubscriptionStatus(conversationId, 'connected')
           }
         )
         .on(
           'system',
           { event: 'CHANNEL_ERROR' },
           () => {
-            subscriptionManager.updateStatus(`messages:${conversationId}`, 'error')
-            onSubscriptionStatusChange?.('error')
+            setSubscriptionStatus(conversationId, 'error')
           }
         )
         .on(
           'system',
           { event: 'DISCONNECT' },
           () => {
-            subscriptionManager.updateStatus(`messages:${conversationId}`, 'disconnected')
-            onSubscriptionStatusChange?.('disconnected')
+            setSubscriptionStatus(conversationId, 'disconnected')
             subscriptionManager.handleDisconnect(
               `messages:${conversationId}`,
               supabase,
@@ -213,7 +202,7 @@ export const useMessageSubscription = ({
 
       messageSubscriptionRef.current = channel
       subscriptionManager.registerSubscription(`messages:${conversationId}`, channel)
-      onSubscriptionStatusChange?.('connecting')
+      setSubscriptionStatus(conversationId, 'connecting')
 
       return channel
     }
@@ -230,10 +219,10 @@ export const useMessageSubscription = ({
     addMessage,
     updateMessage,
     deleteMessage,
+    setSubscriptionStatus,
     onNewMessage,
     onMessageUpdate,
     onMessageDelete,
-    onSubscriptionStatusChange,
   ])
 
   // Subscribe to user presence if needed
@@ -274,8 +263,18 @@ export const useMessageSubscription = ({
     }
   }, [conversationId, onPresenceChange])
 
+  const unsubscribe = () => {
+    if (messageSubscriptionRef.current) {
+      subscriptionManager.removeSubscription(`messages:${conversationId}`, supabase)
+    }
+    if (presenceSubscriptionRef.current) {
+      subscriptionManager.removeSubscription(`presence:${conversationId}`, supabase)
+    }
+  }
+
   return {
     messages: messageCache.getMessages(conversationId),
-    subscriptionStatus: subscriptionManager.getSubscriptionState(`messages:${conversationId}`)?.status,
+    subscriptionStatus: useChatStore((state) => state.subscriptionStatus[conversationId]),
+    unsubscribe,
   }
 } 
