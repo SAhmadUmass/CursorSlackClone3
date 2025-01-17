@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
-import { fetchMessageBatch } from '@/lib/rag/messages'
+import { fetchMessageBatchByConversation } from '@/lib/rag/messages'
 import { processMessageBatches } from '@/lib/rag/embeddings'
-import { upsertEmbeddings } from '@/lib/rag/pinecone'
+import { upsertVectors } from '@/lib/rag/pinecone'
 
 export async function GET() {
   try {
     // 1. Fetch test messages (first 5 for testing)
-    const messageBatch = await fetchMessageBatch()
+    const messageBatch = await fetchMessageBatchByConversation()
     const testMessages = messageBatch.messages.slice(0, 5)
     
     // 2. Generate embeddings
@@ -16,8 +16,8 @@ export async function GET() {
       throw new Error(`Failed to generate embeddings for ${embeddingResults.failed.length} messages`)
     }
 
-    // 3. Store in Pinecone
-    const pineconeResult = await upsertEmbeddings(embeddingResults.successful)
+    // 3. Store in Pinecone (using a test namespace)
+    const pineconeResult = await upsertVectors(embeddingResults.successful, 'test-namespace')
 
     return NextResponse.json({
       success: true,
