@@ -1,174 +1,215 @@
 import { OpenAI } from 'openai'
-import { Pinecone } from '@pinecone-database/pinecone'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { MessageSource } from '@/types'
+import { MessageSource, ConversationType } from '@/types'
 import { env } from '@/env.mjs'
+import { generateEmbeddings } from '@/lib/rag/embeddings'
+import { queryVectors, listNamespaces } from '@/lib/rag/pinecone'
+import { MessageSearchResult } from '@/lib/rag/types'
 
 const openai = new OpenAI({
   apiKey: env.OPENAI_API_KEY,
 })
 
-const pinecone = new Pinecone()
+interface PineconeMetadata {
+  content: string
+  user_name?: string
+  user_id?: string
+  created_at?: string
+  conversation_type?: ConversationType
+  [key: string]: any
+}
 
-const SYSTEM_PROMPT = `You are a friendly and helpful AI assistant in a chat application. While you have access to conversation history and can help users find past discussions, you can also engage in general conversation about any topic.
+// Format namespace consistently with realtime.ts
+function formatNamespace(conversationType: ConversationType, conversationId: string): string {
+  return `rag-${conversationType}-${conversationId}`
+}
 
-Feel free to:
-- Have natural, friendly conversations
-- Share knowledge and insights
-- Help with questions and tasks
-- Make relevant suggestions
-
-When referencing past messages:
-- Quote relevant parts when helpful
-- Provide context about the conversation
-- Be natural about incorporating past context
+// Enhanced system prompt that includes context
+function getSystemPrompt(context?: string): string {
+  let prompt = `You are a friendly and helpful AI assistant in a chat application.
 
 Keep your responses:
 - Friendly and conversational
 - Clear and helpful
 - Natural and engaging
+- ALWAYS quote relevant messages when they exist
+- Be specific about what users have said in the chat
 
-If you don't find relevant context for a question, just respond normally as a helpful assistant would. You don't need to always reference past messages.`
+When referencing past messages:
+- Use exact quotes when available
+- Mention who said what
+- Include when messages are from other channels`
+
+  if (context) {
+    prompt += `\n\nHere are relevant messages from previous conversations:\n${context}\n\n
+When answering the user's question:
+1. ALWAYS reference these messages if they're relevant
+2. Use exact quotes from the messages
+3. Mention which user said what
+4. If someone has explicitly mentioned the topic, point that out
+5. If the messages show direct discussion of the topic, highlight that
+
+For example, if someone asks "Has anyone mentioned X?" and you see a message about X, say something like:
+"Yes, [User] specifically said '[exact quote]' in [channel context]"`
+  }
+
+  return prompt
+}
 
 export async function POST(request: Request) {
   try {
-    console.log('AI Chat: Received request')
-    
+    // Authentication check
     const supabase = createRouteHandlerClient({ cookies })
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      console.log('AI Chat: No user found')
+      console.error('AI Chat: Authentication failed', authError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { query, conversation_id } = await request.json()
-    console.log('AI Chat: Query received:', query)
+    // Input validation
+    const body = await request.json()
+    const { query, conversation_id, conversation_type = 'channel' } = body
 
-    if (!query || !conversation_id) {
-      console.log('AI Chat: Missing required fields')
-      return NextResponse.json({ error: 'Query and conversation_id are required' }, { status: 400 })
+    if (!query?.trim() || !conversation_id?.trim()) {
+      console.error('AI Chat: Missing required fields', { query, conversation_id })
+      return NextResponse.json(
+        { error: 'Query and conversation_id are required' },
+        { status: 400 }
+      )
     }
 
-    // Initialize Pinecone
-    console.log('AI Chat: Initializing Pinecone')
-    const index = pinecone.Index(env.PINECONE_INDEX_TWO!)
+    // Check Pinecone index status
+    console.log('AI Chat: Checking Pinecone index status...')
+    await listNamespaces()
 
-    // Get query embedding
-    console.log('AI Chat: Generating query embedding')
-    const queryEmbedding = await openai.embeddings.create({
-      model: "text-embedding-ada-002",
-      input: query,
+    // Generate embedding for the query
+    console.log('AI Chat: Generating embedding for query:', query)
+    const [queryEmbedding] = await generateEmbeddings([query])
+    console.log('AI Chat: Embedding generated successfully')
+    
+    // Search for relevant messages in the conversation namespace
+    const namespace = formatNamespace(conversation_type, conversation_id)
+    console.log('AI Chat: Searching with params:', {
+      conversationType: conversation_type,
+      conversationId: conversation_id,
+      embeddingLength: queryEmbedding.length,
+      namespace
     })
-
-    // Search Pinecone with metadata
-    console.log('AI Chat: Searching Pinecone')
-    const queryResponse = await index.query({
-      vector: queryEmbedding.data[0].embedding,
-      topK: 5,
-      includeMetadata: true,
+    
+    const searchResults = await queryVectors(
+      queryEmbedding,
+      namespace,
+      5 // Get top 5 most relevant messages
+    )
+    
+    console.log('AI Chat: Vector search results:', {
+      matchCount: searchResults.matches.length,
+      scores: searchResults.matches.slice(0, 3).map(m => m.score),
+      sampleContent: searchResults.matches[0]?.metadata?.content
     })
-
-    console.log('AI Chat: Found matches:', queryResponse.matches?.length)
-
-    // Transform matches into source citations
-    const sources: MessageSource[] = queryResponse.matches
-      ?.filter(match => match.metadata)
-      .map(match => ({
-        id: match.id,
-        content: match.metadata?.content as string,
-        created_at: match.metadata?.created_at as string,
-        conversation_id: match.metadata?.conversation_id as string,
-        conversation_type: match.metadata?.conversation_type as 'channel' | 'dm',
-        user: {
-          id: match.metadata?.user_id as string,
-          full_name: match.metadata?.user_name as string,
+    
+    // Format messages as sources for the UI
+    const sources: MessageSource[] = searchResults.matches
+      .filter(match => match.metadata && typeof match.metadata === 'object')
+      .map(match => {
+        const metadata = match.metadata as PineconeMetadata
+        const channelId = metadata.channel_id || ''
+        return {
+          id: match.id,
+          content: metadata.content || '',
+          created_at: metadata.created_at || new Date().toISOString(),
+          user: {
+            id: metadata.user_id || 'unknown',
+            full_name: metadata.user_name || 'Unknown User'
+          },
+          score: match.score,
+          channel_id: channelId,
+          is_from_other_channel: channelId !== conversation_id
         }
-      })) || []
-
-    // Format source messages for context, including timestamps
-    const sourceMessages = sources.map(source => {
-      const date = new Date(source.created_at)
-      const timeAgo = getTimeAgo(date)
-      return `${source.user.full_name} (${timeAgo}): "${source.content}"`
-    }).join('\n\n')
-
-    console.log('AI Chat: Generating response')
-    // Generate AI response
+      })
+      // Sort by relevance score
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+    
+    // Log all found sources for debugging
+    console.log('AI Chat: All found sources:', sources.map(s => ({
+      content: s.content,
+      score: s.score,
+      user: s.user.full_name,
+      channel: s.channel_id
+    })))
+    
+    // Format context for the LLM
+    const context = sources.length > 0
+      ? sources
+          .filter(source => source.score && source.score > 0.85) // Only include highly relevant messages
+          .map(source => {
+            const channelContext = source.is_from_other_channel 
+              ? ` (in channel ${source.channel_id})` 
+              : ' (in current channel)'
+            const relevance = source.score 
+              ? ` [relevance: ${(source.score * 100).toFixed(1)}%]`
+              : ''
+            return `Message: [${source.user.full_name}${channelContext}${relevance}] said "${source.content}" at ${source.created_at}`
+          })
+          .join('\n\n')
+      : undefined
+    
+    // Log final context being sent to AI
+    console.log('AI Chat: Final context being sent to AI:', context || 'No context')
+    
+    // Create chat completion with streaming
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: 'gpt-4o-mini',
       messages: [
         {
-          role: "system",
-          content: SYSTEM_PROMPT
+          role: 'system',
+          content: getSystemPrompt(context)
         },
         {
-          role: "user",
-          content: `Here are some relevant messages from the conversation history:
-
-${sourceMessages}
-
-User's question: ${query}
-
-Provide a helpful response using this context. If the context isn't relevant to the question, you can say so.`
+          role: 'user',
+          content: query
         }
       ],
-      temperature: 0.7, // Slightly creative but still focused
       stream: true,
+      temperature: 0.5,
     })
 
-    console.log('AI Chat: Streaming response')
-    // Return streaming response with sources
-    const encoder = new TextEncoder()
+    // Create and send the streaming response
     const stream = new ReadableStream({
       async start(controller) {
-        try {
-          // First, send the sources
-          controller.enqueue(encoder.encode(JSON.stringify({ sources }) + '\n'))
-
-          // Then stream the AI response
-          for await (const chunk of response) {
-            const content = chunk.choices[0]?.delta?.content || ''
-            if (content) {
-              controller.enqueue(encoder.encode(content))
-            }
+        // Send sources as the first line
+        controller.enqueue(new TextEncoder().encode(JSON.stringify({ 
+          sources,
+          debug: {
+            namespace,
+            matchCount: searchResults.matches.length,
+            hasContext: !!context,
+            sourcesFromOtherChannels: sources.filter(s => s.is_from_other_channel).length
           }
-          controller.close()
-        } catch (error) {
-          console.error('AI Chat: Streaming error:', error)
-          controller.error(error)
+        }) + '\n'))
+        
+        for await (const chunk of response) {
+          const content = chunk.choices[0]?.delta?.content || ''
+          if (content) {
+            controller.enqueue(new TextEncoder().encode(content))
+          }
         }
-      },
+        controller.close()
+      }
     })
 
     return new Response(stream)
-
   } catch (error) {
-    console.error('AI Chat Error:', error)
-    console.error('AI Chat Error Details:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      type: error instanceof Error ? error.constructor.name : typeof error
-    })
-    return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
+    console.error('Error in AI chat:', error)
+    return NextResponse.json(
+      { 
+        error: 'Failed to process chat message',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    )
   }
-}
-
-// Helper function to format timestamps
-function getTimeAgo(date: Date): string {
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-  if (diffInSeconds < 60) return 'just now'
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
-  
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-  })
 } 

@@ -1,0 +1,162 @@
+**Below is a step-by-step plan for getting the AI chat feature up and running. Follow these instructions carefully and make sure to reference the specified files. Pseudocode is provided where useful, but no actual code lines are included.**
+
+---
+
+## 1. Check the Route & Component Setup
+1. **Create the /ai-chat route**  
+   - Confirm you have a dedicated route (e.g., Next.js page at “src/app/ai-chat/page.tsx”) that renders the AI chat UI.  
+   - Verify it redirects unauthorized users to a sign-in page if needed.
+
+2. **AIChatWindow Component**  
+   - Confirm there's a component (e.g., “src/components/chat/ai-chat/AIChatWindow.tsx”) that encapsulates the AI chat logic.  
+   - If you have references to older or duplicated AI chat components, mark them as deprecated and funnel everything into this new AIChatWindow.
+
+3. **Sidebar Linking**  
+   - Ensure the sidebar or navigation includes a link to “/ai-chat.”  
+   - Double-check that the link properly renders the AIChatWindow component.
+
+> **Important files:**  
+> - “src/app/ai-chat/page.tsx” (needs to render AIChatWindow)  
+> - “src/components/chat/ai-chat/AIChatWindow.tsx” (core AI chat UI logic)  
+
+---
+
+## 2. Update the Message Type for AI
+1. **Extend the Message Interface**  
+   - You may need an “AIMessage” or a “sources” field to store citation data.  
+   - Confirm your main “Message” interface in “src/types/index.ts” (or wherever you keep types) can handle AI-generated text and optional sources.  
+   - Deprecate any old “AIMessage” definitions that conflict with the new, unified structure.
+
+2. **Adapt the Conversation Data**  
+   - Inspect how messages are stored in your database or real-time store.  
+   - If you need AI-specific fields (e.g., GPT model name, embeddings info), extend your existing schema or type definitions accordingly.
+
+> **Important files:**  
+> - “src/types/index.ts” (or “docs/ai-chat-implementation.md” references for “Message” type)  
+> - Any components that rely on the old “AIMessage” structure (mark them deprecated if they conflict)  
+
+---
+
+## 3. Integrate Vector Search (Optional at First)
+1. **Plan for Embeddings**  
+   - If you’re using Pinecone or another vector database, make sure you have a function or script to generate embeddings.  
+   - If you’re just trying to get basic AI answers working (without context retrieval), skip the vector search initially and return a generic AI response for testing.
+
+2. **Metadata Filtering**  
+   - Only attempt advanced filtering (by date, channel, user) once the basic query flow is stable.  
+   - Deprecate or comment out any half-implemented filtering code that might cause errors or confusion.
+
+> **Important files:**  
+> - A possible “src/lib/rag/pinecone.ts” or similar (vector DB operations)  
+> - “docs/ai-chat-implementation.md” → “### 3. Vector Search Integration”  
+
+---
+
+## 4. Implement or Refine AI Streaming Logic
+1. **Basic Streaming Setup**  
+   - Verify that your AI endpoint returns partial tokens or streams data if that's required.  
+   - If streaming is not yet fully implemented, return static text from the AI just to confirm the flow works end to end.
+
+2. **Add Proper Parsing** (Optional—if you want streaming now)  
+   - Parse incoming tokens in the front end (in AIChatWindow or a shared ChatWindow) to build the AI message gradually.  
+   - If chunk parsing is causing errors, log the partial chunks to see what data is being returned.
+
+3. **Handle Interrupted Streams**  
+   - Introduce a simple cancellation or error boundary if the user navigates away.  
+   - In pseudocode:
+     ```
+     onStreamInterrupt():
+       cancel reading from stream
+       setIsLoading(false)
+     ```
+   - You can hold off on full retry logic or timeouts until you confirm the basic stream works.
+
+> **Important files:**  
+> - “src/components/chat/ai-chat/AIChatWindow.tsx” for front-end streaming handling  
+> - “docs/ai-chat-implementation.md” → “### 4. Streaming Implementation”  
+
+---
+
+## 5. Set Up Basic Error Handling
+1. **Catch AI Endpoint Errors**  
+   - Wrap your AI request in try/catch blocks on both server and client.  
+   - Log or display a user-friendly message if the AI cannot respond.
+
+2. **Add a Minimal Fallback**  
+   - If the AI fails, respond with “I’m sorry, something went wrong. Please try again.”
+
+3. **Maintain Simplicity**  
+   - Don’t build too many layers of error boundaries yet—just make sure you’re not leaving the user stuck if the AI route fails.
+
+> **Important files:**  
+> - Your AI route file (e.g., “src/app/api/ai-chat/messages/route.ts” or similar)  
+> - “docs/ai-chat-implementation.md” → “### 5. Error Handling”  
+
+---
+
+## 6. Improve the UI/UX
+1. **AI-Specific Styling**  
+   - If you have specialized styles for AI messages, confirm they are applied (e.g., a different background color or icon).  
+   - Add a source citation panel or references if you plan to show context from the vector search.
+
+2. **Loading & Indicators**  
+   - Show a “Typing…” indicator or spinner while the AI is processing.  
+   - Provide visual feedback that the system is “thinking” to reassure the user.
+
+3. **Copy/Paste Buttons** (Optional)  
+   - If your design calls for a quick “copy text” button, add it to the AI messages for easy copying.
+
+> **Important files:**  
+> - “src/components/chat/ai-chat/AIChatWindow.tsx” for UI refinements.  
+> - Possibly a shared “src/components/chat/message-list.tsx” or “message-item.tsx” for styling.  
+> - “docs/ai-chat-implementation.md” → “### 6. UI/UX Improvements”  
+
+---
+
+## 7. (Optional) Performance Optimizations
+1. **Message Virtualization**  
+   - If you have many AI messages, you could integrate virtualization (e.g., react-window) in your message list to avoid slow rendering.
+
+2. **Response Caching**  
+   - Cache repeated AI responses if needed. For instance, if the user asks the same question, optionally store or re-use the last answer.
+
+> **Important files:**  
+> - “src/components/chat/message-list.tsx” if you add virtualization  
+> - “docs/ai-chat-implementation.md” → “### 7. Performance Optimizations”  
+
+---
+
+## 8. Final Verification & Deprecations
+1. **Eliminate Old Files**  
+   - If you have a separate “AIChatWindowLegacy.tsx” or sprint-based prototypes, deprecate or remove them once the new AIChatWindow is confirmed working.
+
+2. **Check for Old Endpoints**  
+   - If you had separate “/api/ai-legacy” or similar endpoints, redirect or remove them.  
+   - Mark them as deprecated in your documentation.
+
+3. **Test End-to-End**  
+   - Open two browser sessions, or have a friend test.  
+   - Verify normal messaging, AI responses, error handling, and streaming if applicable.
+
+> **Important files:**  
+> - Any legacy AI chat or message components not in use  
+> - Old “/api/ai-legacy” routes or files  
+
+---
+
+## 9. Next Steps & Ongoing Improvements
+- **Refine the AI prompts**: Tweak your system instructions and user prompts for better or more personality-driven responses.  
+- **Integrate metadata filtering**: Narrow down the vector search by date, channel, or user.  
+- **Expand error boundaries**: Provide robust user feedback if the AI route is down or if streaming fails.  
+- **Document final architecture**: Update your readme or internal docs with the new approach so other devs know how to build on top of the AI chat feature.
+
+---
+
+### Key Files (Recap)
+• “src/app/ai-chat/page.tsx” – Renders the AI chat UI.  
+• “src/components/chat/ai-chat/AIChatWindow.tsx” – Main AI chat logic and streaming.  
+• “src/types/index.ts” (or similar) – Unified message type with AI fields.  
+• Vector DB integration (optional now): “src/lib/rag/pinecone.ts” or related files.  
+• Deprecate old routes/components that conflict with the new AI approach.
+
+By following these steps in order—first establishing a route and basic functionality, then layering streaming and vector search, and later polishing with UX, error handling, and performance—your AI chat feature will become both functional and maintainable.

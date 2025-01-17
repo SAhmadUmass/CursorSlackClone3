@@ -47,6 +47,9 @@ export interface MessageSource {
     id: string
     full_name: string
   }
+  score?: number
+  channel_id?: string
+  is_from_other_channel?: boolean
 }
 
 

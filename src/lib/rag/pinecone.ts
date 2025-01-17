@@ -2,15 +2,28 @@ import { Pinecone } from '@pinecone-database/pinecone'
 import { MessageVector } from './types'
 import { env } from '@/env.mjs'
 
+// Log Pinecone environment variables
+console.log('Pinecone Environment Variables:', {
+  apiKey: env.PINECONE_API_KEY?.slice(0, 5) + '...',
+  environment: env.PINECONE_ENVIRONMENT,
+  index: env.PINECONE_INDEX_TWO
+})
+
 // Only initialize Pinecone if all required environment variables are present
-const pinecone = env.PINECONE_API_KEY && env.PINECONE_ENVIRONMENT && env.PINECONE_INDEX
-  ? new Pinecone({
-      apiKey: env.PINECONE_API_KEY
-    })
-  : null
+const pc = new Pinecone({
+  apiKey: env.PINECONE_API_KEY || '',
+})
+
+if (!env.PINECONE_API_KEY || !env.PINECONE_ENVIRONMENT || !env.PINECONE_INDEX_TWO) {
+  console.error('Pinecone initialization failed. Missing environment variables:', {
+    hasApiKey: !!env.PINECONE_API_KEY,
+    hasEnvironment: !!env.PINECONE_ENVIRONMENT,
+    hasIndex: !!env.PINECONE_INDEX_TWO
+  })
+}
 
 // Get the index instance if Pinecone is initialized
-const index = pinecone?.index(env.PINECONE_INDEX || '')
+const index = env.PINECONE_INDEX_TWO ? pc.index(env.PINECONE_INDEX_TWO) : null
 
 /**
  * Clean metadata for Pinecone requirements
@@ -95,10 +108,63 @@ export async function queryVectors(vector: number[], namespace: string, topK: nu
   }
 
   try {
-    const results = await index.namespace(namespace).query({
+    // First try a global search to see what's in the index
+    console.log('Attempting global search first...')
+    let results = await index.query({
+      vector,
+      topK: 10, // Get more results to filter
+      includeMetadata: true
+    })
+
+    // Log all results for debugging
+    console.log('All search results:', 
+      results.matches.map(m => ({
+        score: m.score,
+        content: m.metadata?.content,
+        user: m.metadata?.user_name,
+        channel: m.metadata?.channel_id
+      }))
+    )
+
+    // Filter for highly relevant results (score > 0.85)
+    const relevantResults = results.matches.filter(m => m.score && m.score > 0.85)
+    
+    if (relevantResults.length > 0) {
+      console.log('Found highly relevant results:', 
+        relevantResults.map(m => ({
+          score: m.score,
+          content: m.metadata?.content,
+          user: m.metadata?.user_name
+        }))
+      )
+      // Return only relevant results
+      return {
+        ...results,
+        matches: relevantResults
+      }
+    }
+
+    // If no highly relevant results, try channel-specific search
+    const channelId = namespace.replace('rag-channel-', '')
+    console.log('No highly relevant results, trying channel:', channelId)
+    
+    results = await index.query({
       vector,
       topK,
-      includeMetadata: true
+      includeMetadata: true,
+      filter: {
+        channel_id: { $eq: channelId }
+      }
+    })
+
+    // Log channel results
+    console.log('Channel-specific results:', {
+      channelId,
+      matchCount: results.matches.length,
+      matches: results.matches.map(m => ({
+        score: m.score,
+        content: m.metadata?.content
+      }))
     })
 
     return results
@@ -130,6 +196,35 @@ export async function deleteVectors(ids: string[], namespace: string) {
     }
   } catch (error) {
     console.error('Error deleting from Pinecone:', error)
+    throw error
+  }
+}
+
+/**
+ * List all namespaces in the index
+ */
+export async function listNamespaces() {
+  if (!index) {
+    console.warn('Pinecone is not initialized. Cannot list namespaces.')
+    return []
+  }
+
+  try {
+    // Try a query with no vector to get index stats
+    const stats = await index.query({
+      vector: Array(1536).fill(0),
+      topK: 1,
+      includeMetadata: true
+    })
+    
+    console.log('Pinecone index query test:', {
+      hasResults: stats.matches.length > 0,
+      metadata: stats.matches[0]?.metadata
+    })
+    
+    return stats
+  } catch (error) {
+    console.error('Error checking index:', error)
     throw error
   }
 } 

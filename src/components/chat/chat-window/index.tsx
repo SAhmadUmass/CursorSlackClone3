@@ -6,6 +6,7 @@ import { MessageInput } from '@/components/chat/message-input'
 import { ChatWindowHeader } from './header'
 import { ChatWindowProps } from './types'
 import { cn } from '@/lib/utils'
+import { useEffect, useRef } from 'react'
 
 export function ChatWindow({
   conversationId,
@@ -13,13 +14,28 @@ export function ChatWindow({
   initialMessages = [],
   className,
 }: ChatWindowProps) {
-  const { messages } = useChatStore()
+  const { messages, setMessages } = useChatStore()
+  const initialized = useRef(false)
+  
+  // Initialize messages only once when component first mounts
+  useEffect(() => {
+    if (!initialized.current && initialMessages.length > 0) {
+      console.log('ChatWindow: Setting initial messages')
+      setMessages([...initialMessages])
+      initialized.current = true
+    }
+  }, []) // Remove dependencies to only run once on mount
+
+  // Debug log when messages change
+  useEffect(() => {
+    console.log('ChatWindow: Current messages:', messages)
+  }, [messages])
   
   const title = mode === 'ai' ? 'AI Assistant' : 'Chat'
   const subtitle = mode === 'ai' ? 'Powered by ChatGPT with access to conversation history' : undefined
 
   return (
-    <div className={cn('flex-1 flex flex-col h-full max-h-screen', className)}>
+    <div className={cn('flex flex-col h-full', className)}>
       {/* Header */}
       <ChatWindowHeader
         mode={mode}
@@ -28,7 +44,7 @@ export function ChatWindow({
       />
 
       {/* Messages */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 overflow-hidden relative">
         <MessageList 
           messages={messages} 
           isLoading={false} 
@@ -43,8 +59,8 @@ export function ChatWindow({
           mode === 'ai'
             ? 'Ask me anything about the conversation history...'
             : mode === 'dm'
-            ? `Message ${title}`
-            : `Message #${title}`
+            ? 'Type a message...'
+            : 'Type a message...'
         }
       />
     </div>

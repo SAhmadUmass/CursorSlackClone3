@@ -4,9 +4,12 @@ import { cn } from '@/lib/utils'
 import { Bot } from 'lucide-react'
 import { JSX, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ConversationType, Message } from '@/types'
+import { ConversationType, Message, MessageSource } from '@/types'
 import { v4 as uuidv4 } from 'uuid'
 import { useChatStore } from '@/lib/store/chat-store'
+
+// Use a constant UUID for the AI user
+const AI_USER_ID = '00000000-0000-0000-0000-000000000000'
 
 interface MessageInputProps {
   conversationId: string
@@ -27,7 +30,18 @@ export function MessageInput({
   const [isLoading, setIsLoading] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const supabase = createClient()
-  const { user, addMessage } = useChatStore()
+  const { 
+    user, 
+    messages,
+    setMessages,
+    addMessage,
+    updateMessageStatus,
+    startAITyping, 
+    stopAITyping, 
+    updateAIMessage, 
+    finalizeAIMessage,
+    isAITyping 
+  } = useChatStore()
 
   // Auto-resize textarea
   useEffect(() => {
@@ -38,23 +52,24 @@ export function MessageInput({
     textarea.style.height = `${textarea.scrollHeight}px`
   }, [message])
 
-  // Handle sending message
-  const handleSend = async () => {
+  // Handle AI message streaming
+  const handleAIMessage = async () => {
     if (!message.trim() || isLoading || !user) return
 
     setIsLoading(true)
-    const optimisticId = uuidv4()
-    const timestamp = new Date().toISOString()
 
-    // Create optimistic message
-    const optimisticMessage: Message = {
-      id: optimisticId,
+    // Create user message with status
+    const userMessageId = crypto.randomUUID()
+    const timestamp = new Date().toISOString()
+    const userMessage: Message = {
+      id: userMessageId,
       conversation_id: conversationId,
       conversation_type: mode,
       content: message.trim(),
-      client_generated_id: optimisticId,
+      client_generated_id: userMessageId,
       created_at: timestamp,
       user_id: user.id,
+      status: 'sending',
       user: {
         id: user.id,
         email: user.email || '',
@@ -63,8 +78,133 @@ export function MessageInput({
       }
     }
 
-    // Add optimistic message to store
-    addMessage(optimisticMessage)
+    // Add message to store first
+    addMessage(userMessage)
+    setMessage('')
+
+    try {
+      // Save user message to Supabase
+      const { error: insertError } = await supabase
+        .from('messages')
+        .insert({
+          id: userMessageId,
+          conversation_id: conversationId,
+          conversation_type: mode,
+          content: userMessage.content,
+          client_generated_id: userMessageId,
+          created_at: timestamp,
+          user_id: user.id,
+          sources: []
+        })
+
+      if (insertError) throw insertError
+      updateMessageStatus(userMessageId, 'sent')
+
+      // Start AI response
+      startAITyping()
+
+      // Start AI streaming
+      const response = await fetch('/api/ai-chat/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          query: userMessage.content, 
+          conversation_id: conversationId 
+        })
+      })
+
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to get AI response')
+      }
+
+      const reader = response.body.getReader()
+      let sources: MessageSource[] = []
+      let accumulatedMessage = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = new TextDecoder().decode(value)
+
+        // First line contains sources
+        if (!sources.length && chunk.includes('\n')) {
+          const [sourcesJson, ...rest] = chunk.split('\n')
+          sources = JSON.parse(sourcesJson).sources
+          accumulatedMessage = rest.join('\n')
+        } else {
+          accumulatedMessage += chunk
+        }
+
+        // Update streaming message
+        updateAIMessage(accumulatedMessage, sources)
+      }
+
+      // Save AI message to Supabase
+      const aiMessageId = crypto.randomUUID()
+      const aiMessage = {
+        id: aiMessageId,
+        conversation_id: conversationId,
+        conversation_type: mode,
+        content: accumulatedMessage,
+        client_generated_id: aiMessageId,
+        created_at: new Date().toISOString(),
+        user_id: AI_USER_ID,
+        sources: sources || []
+      }
+
+      const { error: aiError } = await supabase
+        .from('messages')
+        .insert(aiMessage)
+
+      if (aiError) throw aiError
+
+      // Finalize the message
+      finalizeAIMessage(accumulatedMessage, sources)
+      onMessageSent?.()
+
+    } catch (error) {
+      console.error('AI Chat Error:', error)
+      updateMessageStatus(
+        userMessageId, 
+        'error', 
+        error instanceof Error ? error.message : 'Failed to get AI response'
+      )
+      stopAITyping()
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle sending regular message
+  const handleRegularMessage = async () => {
+    if (!message.trim() || isLoading || !user) return
+
+    setIsLoading(true)
+    const messageId = crypto.randomUUID()
+    const timestamp = new Date().toISOString()
+
+    // Create message with sending status
+    const newMessage: Message = {
+      id: messageId,
+      conversation_id: conversationId,
+      conversation_type: mode,
+      content: message.trim(),
+      client_generated_id: messageId,
+      created_at: timestamp,
+      user_id: user.id,
+      status: 'sending',
+      user: {
+        id: user.id,
+        email: user.email || '',
+        full_name: user.user_metadata?.full_name || 'Unknown User',
+        avatar_url: user.user_metadata?.avatar_url || null,
+      }
+    }
+
+    // Add message and clear input
+    addMessage(newMessage)
+    setMessage('')
 
     try {
       const { error } = await supabase
@@ -72,22 +212,36 @@ export function MessageInput({
         .insert({
           conversation_id: conversationId,
           conversation_type: mode,
-          content: message.trim(),
-          client_generated_id: optimisticId,
+          content: newMessage.content,
+          client_generated_id: messageId,
           created_at: timestamp,
           user_id: user.id,
+          sources: []
         })
 
       if (error) throw error
       
-      setMessage('') // Clear on success
-      onMessageSent?.() // Notify parent of successful send
+      // Update status to sent
+      updateMessageStatus(messageId, 'sent')
+      onMessageSent?.()
     } catch (err) {
       console.error('Failed to send message:', err)
-      // Note: We don't remove the optimistic message on error
-      // The real-time subscription will handle syncing the correct state
+      updateMessageStatus(
+        messageId, 
+        'error', 
+        err instanceof Error ? err.message : 'Failed to send message'
+      )
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Handle send based on mode
+  const handleSend = () => {
+    if (mode === 'ai') {
+      handleAIMessage()
+    } else {
+      handleRegularMessage()
     }
   }
 
@@ -102,8 +256,17 @@ export function MessageInput({
   }
 
   return (
-    <div className={cn('p-4 border-t border-border', className)}>
-      <div className={cn('flex items-center gap-3', 'relative')}>
+    <div className={cn(
+      'p-4 border-t border-border',
+      'bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+      'sticky bottom-0',
+      className
+    )}>
+      <div className={cn(
+        'flex items-center gap-3',
+        'relative',
+        'max-w-3xl mx-auto'
+      )}>
         {/* Message Input */}
         <textarea
           ref={textareaRef}
@@ -112,12 +275,12 @@ export function MessageInput({
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          disabled={isLoading}
+          disabled={isLoading || isAITyping}
           className={cn(
             'flex-1',
             'rounded-xl',
             'border border-border',
-            'bg-background/80',
+            'bg-background',
             'px-4 py-2.5',
             'text-foreground',
             'placeholder:text-muted-foreground',
@@ -127,7 +290,8 @@ export function MessageInput({
             'min-h-[42px]',
             'max-h-[200px]',
             'disabled:opacity-50',
-            'disabled:cursor-not-allowed'
+            'disabled:cursor-not-allowed',
+            'shadow-sm'
           )}
         />
 
@@ -135,7 +299,7 @@ export function MessageInput({
         {mode === 'ai' && (
           <button
             onClick={handleSend}
-            disabled={isLoading || !message.trim()}
+            disabled={isLoading || !message.trim() || isAITyping}
             className={cn(
               'px-4 py-2.5',
               'bg-primary text-primary-foreground',
@@ -145,17 +309,22 @@ export function MessageInput({
               'focus:outline-none focus:ring-2 focus:ring-primary/20',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               'transition-all duration-200',
-              'flex items-center gap-2'
+              'flex items-center gap-2',
+              'shadow-sm'
             )}
           >
-            <span>{isLoading ? 'Thinking...' : 'Ask'}</span>
+            <span>{isLoading || isAITyping ? 'Thinking...' : 'Ask'}</span>
             <Bot className="h-4 w-4" />
           </button>
         )}
       </div>
 
       {/* Helper text for keyboard shortcuts */}
-      <div className={cn('text-xs text-muted-foreground/60', 'mt-2 ml-1')}>
+      <div className={cn(
+        'text-xs text-muted-foreground/60',
+        'mt-2',
+        'text-center'
+      )}>
         Press Enter to send, Shift + Enter for new line
       </div>
     </div>
