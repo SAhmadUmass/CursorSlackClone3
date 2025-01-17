@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { fetchMessageBatchByConversation } from '@/lib/rag/messages'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
+
 export async function GET() {
   try {
     // Try to fetch the first batch of messages

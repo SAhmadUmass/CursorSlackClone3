@@ -7,6 +7,9 @@ import { MessageVector } from '@/lib/rag/types'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
+
 export async function GET(request: Request) {
   try {
     // Check authentication

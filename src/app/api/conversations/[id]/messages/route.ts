@@ -4,6 +4,9 @@ import { NextResponse } from 'next/server'
 import { Message, SendMessageRequest } from '@/types'
 import { processMessageBackground } from '@/lib/rag/realtime'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const supabase = createRouteHandlerClient({ cookies })

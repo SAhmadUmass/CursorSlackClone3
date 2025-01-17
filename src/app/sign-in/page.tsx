@@ -2,18 +2,25 @@
 
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AuthForm } from '@/components/auth/auth-form'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export default function SignInPage() {
-  const [supabase] = useState(() => createClient())
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
   const [error, setError] = useState<string>('')
   const searchParams = useSearchParams()
   const message = searchParams.get('message')
 
+  useEffect(() => {
+    setSupabase(createClient())
+  }, [])
+
   const handleSubmit = async (data: any) => {
+    if (!supabase) return
+
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,

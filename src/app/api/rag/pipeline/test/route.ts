@@ -3,6 +3,9 @@ import { fetchMessageBatchByConversation } from '@/lib/rag/messages'
 import { processMessageBatches } from '@/lib/rag/embeddings'
 import { upsertVectors } from '@/lib/rag/pinecone'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
+
 export async function GET() {
   try {
     // 1. Fetch test messages (first 5 for testing)
