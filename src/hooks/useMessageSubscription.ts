@@ -274,7 +274,7 @@ export const useMessageSubscription = ({
 
   return {
     messages: messageCache.getMessages(conversationId),
-    subscriptionStatus: useChatStore((state) => state.subscriptionStatus[conversationId]),
+    subscriptionStatus: useChatStore((state) => state.getSubscriptionStatus(conversationId)),
     unsubscribe,
   }
 } 
