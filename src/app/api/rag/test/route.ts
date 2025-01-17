@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { fetchMessageBatch } from '@/lib/rag'
+import { fetchMessageBatchByConversation } from '@/lib/rag/messages'
 
 export async function GET() {
   try {
     // Try to fetch the first batch of messages
-    const result = await fetchMessageBatch()
+    const result = await fetchMessageBatchByConversation()
 
     return NextResponse.json({
       success: true,
