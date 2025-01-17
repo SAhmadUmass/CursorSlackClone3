@@ -18,6 +18,8 @@ interface ChatStore {
   messages: Message[]
   setMessages: (messagesOrUpdater: Message[] | ((messages: Message[]) => Message[])) => void
   addMessage: (message: Message) => void
+  updateMessage: (message: Message) => void
+  deleteMessage: (message: Message) => void
   updateMessageStatus: (clientGeneratedId: string, status: 'sending' | 'sent' | 'error', error?: string) => void
   
   // AI Streaming
@@ -32,6 +34,10 @@ interface ChatStore {
   // User
   user: any | null
   setUser: (user: any | null) => void
+  
+  // Subscription Status
+  subscriptionStatus: SubscriptionStatus
+  setSubscriptionStatus: (status: SubscriptionStatus) => void
 }
 
 export const useChatStore = create<ChatStore>((set) => ({
@@ -50,6 +56,14 @@ export const useChatStore = create<ChatStore>((set) => ({
   })),
   addMessage: (message) => set((state) => ({
     messages: [...state.messages, message]
+  })),
+  updateMessage: (message) => set((state) => ({
+    messages: state.messages.map(msg =>
+      msg.id === message.id ? message : msg
+    )
+  })),
+  deleteMessage: (message) => set((state) => ({
+    messages: state.messages.filter(msg => msg.id !== message.id)
   })),
   updateMessageStatus: (clientGeneratedId, status, error) => set((state) => ({
     messages: state.messages.map(msg =>
@@ -101,5 +115,9 @@ export const useChatStore = create<ChatStore>((set) => ({
   
   // User
   user: null,
-  setUser: (user) => set({ user })
+  setUser: (user) => set({ user }),
+  
+  // Subscription Status
+  subscriptionStatus: 'disconnected' as SubscriptionStatus,
+  setSubscriptionStatus: (status) => set({ subscriptionStatus: status })
 }))
