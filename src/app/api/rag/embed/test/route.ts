@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { fetchMessageBatch } from '@/lib/rag/messages'
+import { fetchMessageBatchByConversation } from '@/lib/rag/messages'
 import { processMessageBatches } from '@/lib/rag/embeddings'
 
 export async function GET() {
   try {
     // 1. Fetch a small batch of messages (first 5 for testing)
-    const messageBatch = await fetchMessageBatch()
+    const messageBatch = await fetchMessageBatchByConversation()
     const testMessages = messageBatch.messages.slice(0, 5)
 
     // 2. Generate embeddings
