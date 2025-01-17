@@ -36,11 +36,12 @@ interface ChatStore {
   setUser: (user: any | null) => void
   
   // Subscription Status
-  subscriptionStatus: SubscriptionStatus
-  setSubscriptionStatus: (status: SubscriptionStatus) => void
+  subscriptionStatuses: Record<string, SubscriptionStatus>
+  setSubscriptionStatus: (conversationId: string, status: SubscriptionStatus) => void
+  getSubscriptionStatus: (conversationId: string) => SubscriptionStatus
 }
 
-export const useChatStore = create<ChatStore>((set) => ({
+export const useChatStore = create<ChatStore>((set, get) => ({
   // Conversations
   conversations: [],
   setConversations: (conversations) => set({ conversations }),
@@ -118,6 +119,12 @@ export const useChatStore = create<ChatStore>((set) => ({
   setUser: (user) => set({ user }),
   
   // Subscription Status
-  subscriptionStatus: 'disconnected' as SubscriptionStatus,
-  setSubscriptionStatus: (status) => set({ subscriptionStatus: status })
+  subscriptionStatuses: {},
+  setSubscriptionStatus: (conversationId, status) => set((state) => ({
+    subscriptionStatuses: {
+      ...state.subscriptionStatuses,
+      [conversationId]: status
+    }
+  })),
+  getSubscriptionStatus: (conversationId) => get().subscriptionStatuses[conversationId] || 'disconnected'
 }))
