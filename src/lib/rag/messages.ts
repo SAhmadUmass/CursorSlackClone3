@@ -1,4 +1,4 @@
-import { Message } from '@/types'
+import { Message, ConversationType } from '@/types'
 import { MessageVector, MessageMetadata } from './types'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
@@ -10,7 +10,7 @@ interface DBMessage {
   id: string
   content: string
   conversation_id: string
-  conversation_type: 'channel' | 'dm'
+  conversation_type: ConversationType
   user_id: string
   created_at: string
   updated_at: string | null
@@ -33,6 +33,7 @@ interface MessageWithMetadata extends MessageBase {
   user?: {
     full_name: string
   }
+  updated_at?: string | null
 }
 
 export function processMessageForEmbedding(message: DBMessage | MessageWithMetadata): MessageVector {
@@ -69,7 +70,7 @@ export function formatMessageSource(metadata: MessageMetadata): string {
 export async function fetchMessageBatchByConversation(
   lastId?: string,
   options: {
-    conversationType?: 'channel' | 'dm'
+    conversationType?: ConversationType
     batchSize?: number
   } = {}
 ): Promise<{
