@@ -22,7 +22,7 @@ export async function GET() {
       // Include first successful embedding as sample (if exists)
       sampleEmbedding: embeddingResults.successful[0] ? {
         id: embeddingResults.successful[0].id,
-        content: embeddingResults.successful[0].metadata.content,
+        content: embeddingResults.successful[0].content,
         embedding: embeddingResults.successful[0].values.slice(0, 5) + '...' // Show first 5 dimensions
       } : null,
       error: embeddingResults.error
